@@ -1,0 +1,111 @@
+[project]
+name = "llmops-platform"
+version = "0.1.0"
+description = "Enterprise Financial Document Assistant — LLMOps / AI platform laboratory"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "llmops-core",
+    "llm-application",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "httpx>=0.28",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "poethepoet>=0.30",
+    "httpx2>=2.13.0",
+]
+
+# ---------------------------------------------------------------------------
+# uv workspace: one lockfile, one venv, many packages.
+# Each app/service/package has its own pyproject.toml and can be built into
+# its own Docker image, but they share pinned dependency versions.
+# ---------------------------------------------------------------------------
+[tool.uv.workspace]
+members = [
+    "packages/*",
+    "apps/*",
+    "services/*",
+]
+
+[tool.uv.sources]
+llmops-core = { workspace = true }
+llm-application = { workspace = true }
+
+# ---------------------------------------------------------------------------
+# Task runner (replaces Makefile on Windows; Makefile delegates here).
+# Usage: uv run poe <task>
+# ---------------------------------------------------------------------------
+[tool.poe.tasks]
+_ruff_check = "ruff check ."
+_ruff_fmt_check = "ruff format --check ."
+lint = ["_ruff_check", "_ruff_fmt_check"]
+fmt = ["_ruff_fmt", "_ruff_fix"]
+_ruff_fmt = "ruff format ."
+_ruff_fix = "ruff check --fix ."
+typecheck = "mypy packages apps"
+test = "pytest"
+test-unit = "pytest tests/unit"
+test-integration = "pytest tests/integration -m integration"
+cov = "pytest --cov --cov-report=term-missing"
+check = ["lint", "typecheck", "test-unit"]
+
+dev = "uvicorn llm_application.main:app --host 0.0.0.0 --port 8080 --reload"
+
+up = "docker compose --profile core up -d --build"
+down = "docker compose --profile core down"
+logs = "docker compose logs -f --tail=100"
+ps = "docker compose ps"
+
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["packages/*/src", "apps/*/src", "services/*/src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "N",        # pep8-naming
+    "S",        # bandit (security)
+    "T20",      # no print
+    "SIM",      # simplify
+    "RUF",
+]
+ignore = ["S101"]  # assert allowed in tests
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "T20"]
+"scripts/**" = ["T20"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+mypy_path = "packages/llmops-core/src:apps/llm-application/src"
+namespace_packages = true
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-ra -q --strict-markers"
+markers = [
+    "integration: needs running docker compose services",
+    "gpu: needs NVIDIA GPU",
+]
+filterwarnings = ["error::DeprecationWarning:llmops_core", "error::DeprecationWarning:llm_application"]
+
+[tool.coverage.run]
+source = ["llmops_core", "llm_application"]
+branch = true

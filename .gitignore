@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Env / secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Data / models / artifacts (large, reproducible)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+models/*
+!models/registry.yaml
+!models/.gitkeep
+benchmarks/results/
+mlruns/
+mlartifacts/
+*.safetensors
+*.gguf
+*.bin
+*.pt
+
+# Docker volumes / local infra state
+infrastructure/**/volumes/
+.minikube/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Node (Promptfoo)
+node_modules/
