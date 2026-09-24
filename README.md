@@ -20,6 +20,12 @@ Guiding rule: **measure → find the bottleneck → optimize → scale the bottl
 
 Full plan: [docs/roadmap.md](docs/roadmap.md). Decisions: [docs/adr/](docs/adr/).
 
+Design references:
+- [docs/metrics-and-capacity.md](docs/metrics-and-capacity.md) — latency / TTFT / ITL / TPOT / throughput / VRAM / cost formulas, worked examples on this GPU, and the metric+span naming map
+- [docs/agent-platform.md](docs/agent-platform.md) — MCP vs A2A, fan-out/join, skills, verification (L1–L4), HITL risk tiers
+- [docs/versioning.md](docs/versioning.md) — nine versioned artifact classes and the release manifest
+- [docs/business-requirements.md](docs/business-requirements.md) — SLOs, quality gates, capacity assumptions
+
 ## Quick start
 
 Prerequisites (audited machine): Python 3.12 via `uv`, Docker Desktop with WSL2 + NVIDIA runtime.

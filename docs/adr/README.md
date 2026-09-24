@@ -18,5 +18,8 @@ Numbering 001–010 follows the master prompt's list; 011+ are additional.
 | [011](ADR-011-monorepo-uv-workspace.md) | Monorepo with uv workspace + poethepoet task runner | Accepted | 1 |
 | [012](ADR-012-structlog-json-logging.md) | structlog JSON logging with request context | Accepted | 1 |
 | [013](ADR-013-health-probe-model.md) | Liveness / readiness / startup probe model | Accepted | 1 |
+| [014](ADR-014-a2a-agent-protocol.md) | A2A for agent-to-agent, alongside MCP | Accepted | 26b |
+| [015](ADR-015-release-manifest-versioning.md) | Nine versioned artifact classes + release manifest | Accepted | 10 → 35 |
+| [016](ADR-016-hitl-risk-tiers.md) | Risk tiers + durable human-in-the-loop interrupt | Accepted | 28b |
 
 Template: [ADR-000-template.md](ADR-000-template.md)

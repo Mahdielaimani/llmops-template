@@ -72,9 +72,11 @@ laptop has one 8 GB GPU. Adaptation is explicit; nothing is pretended.
         +-------+-------+           +-------+--------+
         |               |           |                |
         v               v           v                v
-     Qdrant           BM25       local tools      MCP server
-   (dense, ACL       (in-proc    (calc, SQL)     (controlled
-    filtered)         index)                      resources)
+     Qdrant           BM25    TOOL BROKER      MCP server      A2A PEERS
+   (dense, ACL       (in-proc   (allowlist,     (controlled    (supervisor <-> research /
+    filtered)         index)     authz, risk     resources)     financial / compliance /
+                                 tier, HITL)                    writer; task lifecycle,
+                                                                Agent Card discovery)
         |               |
         +-------+-------+
                 v
@@ -121,9 +123,17 @@ CROSS-CUTTING
                   Jaeger (traces), JSON logs → stdout; Langfuse-or-Phoenix for LLM traces
   Security      : JWT authn, RBAC, ACL-filtered retrieval, tool allowlist,
                   input/output guardrails, secrets via env only, audit log
+                  6 enforcement points, none of them the model (agent-platform.md §5)
+  Agent control : A2A task lifecycle (Postgres-durable), fan-out/join with shared
+                  budget, skill registry, verification L1-L4, HITL approval gate
+                  for write/irreversible actions, kill switch (agent-platform.md)
+  Quantitative  : latency/TTFT/ITL/TPOT/throughput/VRAM/cost formulas and the
+                  instrumentation map (metrics-and-capacity.md)
   Evaluation    : offline datasets + pytest-eval + Promptfoo, LLM-judge, regression gate
   Delivery      : Git, GitHub Actions CI, Docker images, Compose → minikube/Helm, rollback
-  Governance    : prompt/model/dataset versioning, ADRs, production-readiness checklist
+  Governance    : 9 versioned artifact classes + release manifest pinning all of
+                  them; independent rollback; ADRs; production-readiness checklist
+                  (versioning.md)
 ```
 
 ---
@@ -138,7 +148,10 @@ CROSS-CUTTING
 | 4 Load Balancer | Kong Upstream + Targets + health checks | Kong OSS (same process, distinct objects) | 17 |
 | 3b App policy layer | `apps/api-gateway` — thin: token-budget limits, tenant quotas, tool authz (what Kong OSS lacks) | FastAPI | 16, 21 |
 | 5 App services | `apps/llm-application` replicas | FastAPI, stateless | 2 → 18 |
-| 6 Orchestration | `apps/rag-service`, `apps/agent-service` | Python | 8, 24 |
+| 6 Orchestration | `apps/rag-service`, `apps/agent-service` (agent loop, supervisor, join) | Python | 8, 24, 27 |
+| 6b Agent interop | A2A server+client per agent (Agent Card, task lifecycle), MCP client, tool broker | JSON-RPC/SSE over httpx; Postgres task store | 26, 26b |
+| 6c Skills | `skills/*/skill.yaml` — prompt + tool allowlist + limits + eval set | YAML + registry | 27a |
+| 6d Verification & HITL | verifier agent, deterministic checks, approval gate, kill switch | Python + Postgres | 28b |
 | 7 Retrieval/Data | Qdrant, BM25, Postgres, Redis, workers | qdrant, rank-bm25, psycopg, arq | 8, 9, 20 |
 | 8 Model Gateway | `services/model-gateway` | FastAPI + httpx | 15 |
 | 9 Inference | vLLM (OpenAI-compatible), mock, external | vLLM in Docker | 6 |
@@ -190,6 +203,39 @@ per app/service, shared lock).
 ### AD-0.7 Kubernetes via minikube (docker driver, GPU passthrough)
 Local-first. The pre-existing `aks-llmops` context is **not** used
 unless you explicitly ask; cloud spend and credentials are your domain.
+
+### AD-0.10 A2A alongside MCP (not instead of it)
+Decided 2026-09-24. MCP connects an agent to tools; A2A connects an agent
+to peer agents that have their own loop, model and context. Both are
+carried: MCP in Phase 26, A2A in Phase 26b. Agents publish an Agent Card
+generated from the skill registry; task state (`submitted → working →
+input-required → completed/failed/canceled`) lives in Postgres so a
+supervisor restart or a pending human approval does not lose the run.
+*Security:* an A2A peer response is untrusted input — sanitized, framed as
+data, never concatenated into a system prompt. Peer authorization (which
+agent may call which, with what scopes) is enforced by us, not by the
+protocol. Detail: `docs/agent-platform.md`.
+
+### AD-0.11 Nine versioned artifact classes + a release manifest
+Decided 2026-09-24. Code, prompt, model, embedding model, retrieval/chunk
+config, corpus document, index, eval dataset, agent/skill are each
+versioned with their own key and rolled back independently; one release
+manifest pins all nine plus a config hash, and its id is stamped on every
+response and log line. Embedding-model or chunking changes are *breaking*:
+new index version, evaluate, alias flip, keep the old collection for
+rollback. `latest` is banned. Detail: `docs/versioning.md`.
+
+### AD-0.12 Verification and human interrupt over trust
+Decided 2026-09-24. Agent self-reports are generated text, not evidence.
+Four layers: deterministic checks in code (citation contains the claimed
+figure, arithmetic recomputed, schema, tool allowlist), an independent
+verifier agent that never sees the producer's reasoning, trajectory
+evaluation of the process, and signed attestation for audit. Abstention
+(`insufficient_evidence`) is a first-class outcome measured as coverage
+vs accuracy. Actions are classified by risk tier; `write` and
+`irreversible` tiers suspend the run **durably** (state in Postgres, slot
+released) and resume only on an approval token. Detail:
+`docs/agent-platform.md` §4, §6.
 
 ### AD-0.9 Kong OSS (DB-less) as API Gateway and Load Balancer
 Decided 2026-09-17 after review. Custom FastAPI gateway dropped.
@@ -275,6 +321,15 @@ GET /jobs/{id} ─► status
 ---
 
 ## 6. Where the bottleneck will be (prediction, to be measured)
+
+Formulas, worked examples and the full instrumentation map:
+**[docs/metrics-and-capacity.md](metrics-and-capacity.md)**. Headlines for
+Qwen2.5-7B-AWQ on the 8 GB card: KV cache = 56 KiB per token per sequence
+→ ~11 concurrent sequences at 4k context (~5 at 8k); decode is
+bandwidth-bound at ~30–40 tok/s single-stream; prefill of a 3k-token RAG
+context is ~1.7 s and dominates TTFT; requirements imply ~30 requests in
+flight at burst versus ~11 slots → queue and load-shedding are arithmetic
+necessities, not design taste.
 
 | Stage | Expected on this machine | Why |
 |---|---|---|

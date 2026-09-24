@@ -38,7 +38,7 @@ vLLM only in Docker, no `make`, internet currently offline.
 |---|---|---|---|---|
 | 8 | RAG | ☐ | ingestion pipeline (parse/clean/chunk/metadata/version), Qdrant, embedding-service, `/rag` with citations; `docs/rag.md`; ADR-002 | grounded answer with citations on sample financial docs |
 | 9 | Hybrid retrieval + reranking | ☐ | BM25 + RRF fusion + CPU cross-encoder; configurable weights; ADR-003, ADR-004 | vector vs hybrid vs hybrid+rerank comparison |
-| 10 | Prompt / model versioning | ☐ | `prompts/` registry with metadata, `models/registry.yaml`, promote/rollback commands | rollback demo |
+| 10 | Prompt / model versioning | ☐ | `prompts/` registry (immutable released files + semver + stage pointers), `models/registry.yaml`, promote/rollback commands; first 3 of the 9 artifact classes in `docs/versioning.md` | rollback demo; CI fails on edit of a released prompt file |
 | 11 | Evaluation | ☐ | `data/evaluation/` dataset, retrieval metrics (Recall@K, MRR, ...), generation metrics, `docs/evaluation.md` | baseline report |
 | 12 | LLM-as-a-Judge | ☐ | judge prompts, bias/calibration doc, human-vs-judge comparison | **needs: external API key (recommended)** |
 | 13 | MLflow experiments | ☐ | `eval` profile, experiments A/B/C tracked | MLflow UI comparison |
@@ -65,8 +65,13 @@ vLLM only in Docker, no `make`, internet currently offline.
 | 24 | Agent | ☐ | single agent loop, tool registry, max_iter/timeout/cost caps | no infinite loop under adversarial goal |
 | 25 | Agentic RAG | ☐ | retrieval-as-tools, self-check, traced steps; `docs/agentic-rag.md` | agent chooses strategy |
 | 26 | MCP | ☐ | one MCP server (financial resources/tools), client in agent; authz outside MCP | "MCP ≠ security boundary" demo |
+| 26b | **A2A (agent-to-agent)** | ☐ | A2A server+client, Agent Card at `/.well-known/agent-card.json` generated from the skill registry, task lifecycle (submitted→working→input-required→completed/failed/canceled) persisted in Postgres, peer authz + remote-output sanitization; `docs/agent-platform.md` §1; ADR-014 | two agents complete a task across the protocol; supervisor restart mid-task loses nothing |
 | 27 | Multi-agent | ☐ | supervisor + research/analysis/security/writer; delegation depth limit; `docs/multi-agent.md` | bounded run with trace |
+| 27a | **Skills registry** | ☐ | `skills/*/skill.yaml` (prompt ref, tool allowlist, limits, risk tier, eval set); supervisor routes by skill not by agent name; Agent Card generated from it | adding an agent requires no supervisor change |
+| 27b | **Coordination: fan-out / join** | ☐ | parallel branches with shared token+cost budget, per-branch deadline, completion policy (`all`/`first_success`/`quorum`), partial-failure degradation, Redis blackboard | 3 branches join under one budget; one branch killed → answer degrades and says so |
 | 28 | Guardrails | ☐ | input/output/tool guardrails, schema validation, citation check | injection payloads blocked |
+| 28a | **Verification (trust)** | ☐ | L1 deterministic (cited chunk contains the figure, arithmetic recomputed, schema, allowlist), L2 independent verifier agent, L3 trajectory eval, L4 signed attestation; abstention as a measured outcome (coverage vs accuracy); `docs/agent-platform.md` §4 | fabricated citation is a hard fail before the answer is returned |
+| 28b | **HITL interrupt / risk tiers** | ☐ | risk classification per action (read/compute/sensitive-read/write/irreversible), durable suspend to Postgres + A2A `input-required`, single-use resume token bound to approver, auto-deny timeout, kill switch + per-tool circuit breaker; ADR-016 | agent pauses on a write action, releases its slot, survives a restart, resumes on approval |
 | 29 | Security | ☐ | threat model, trust boundaries, tenant isolation, audit log, dependency + image scan; 4 attack simulations; `docs/security.md` | all 4 detected & mitigated |
 
 ## Block F — Scale
@@ -83,7 +88,7 @@ vLLM only in Docker, no `make`, internet currently offline.
 | # | Phase | Status | Key deliverables | Gate to next |
 |---|---|---|---|---|
 | 34 | CI/CD | ☐ | GitHub Actions: lint → unit → integration → security → eval gate → build → scan; `docs/ci-cd.md` | PR pipeline green |
-| 35 | Rollback | ☐ | model/prompt/image rollback procedures, versioning matrix, "reproduce yesterday" | rollback executed |
+| 35 | Rollback + release manifest | ☐ | 9 artifact classes, release manifest pinning all of them, independent rollback per class, index alias flip for breaking embedding/chunking changes, `scripts/pin.py`, "reproduce yesterday" replay; `docs/versioning.md`; ADR-015 | replayed release reproduces its recorded quality-gate metrics |
 | 36 | Drift | ☐ | simulated query/embedding drift, monitors + alerts | alert fires |
 | 37 | Failure engineering | ☐ | 12 incidents (LLM down, Qdrant, Redis, PG, GPU OOM, model load, latency, concurrency, injection, authz, API timeout, reranker) | each: detect→RCA→fix→regression test |
 | 38 | Incident response | ☐ | runbooks, `docs/incident-response.md`, `docs/troubleshooting.md`, incident reports | — |
@@ -111,5 +116,6 @@ vLLM only in Docker, no `make`, internet currently offline.
 ## Change log
 
 - 2026-09-14 — Phase 0 complete: audit, mode decision (HYBRID), roadmap created.
+- 2026-09-24 — Scope additions after review: A2A (26b), skills registry (27a), fan-out/join (27b), verification (28a), HITL risk tiers (28b); release manifest folded into 35. New docs: `metrics-and-capacity.md` (latency/TTFT/ITL/TPOT/throughput/VRAM/cost formulas + instrumentation map), `agent-platform.md`, `versioning.md`. ADR-014/015/016.
 - 2026-09-17 — Phase 1 complete: uv workspace, llmops-core, llm-application, Compose core profile, 20 unit + 5 integration tests, ADR-001/011/012/013, business requirements + SLOs.
 - 2026-09-17 — Gateway/LB decision changed: Kong OSS (DB-less) replaces custom FastAPI gateway + nginx LB (AD-0.9).
