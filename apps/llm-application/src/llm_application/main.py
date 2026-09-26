@@ -5,6 +5,8 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from llm_application.providers import build_provider
+from llm_application.routes import chat
 from llmops_core import __version__
 from llmops_core.config import Settings, get_settings
 from llmops_core.context import RequestContextMiddleware
@@ -24,7 +26,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     health = HealthRegistry(service=settings.app.name)
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        # Clients are built here, not at import, so a module import never opens a socket.
+        app.state.provider = build_provider(settings)
         log.info(
             "startup",
             env=settings.app.env,
@@ -33,6 +37,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             port=settings.server.port,
         )
         yield
+        await app.state.provider.aclose()
         log.info("shutdown")
 
     app = FastAPI(
@@ -44,6 +49,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(RequestContextMiddleware)
     install_error_handlers(app)
     app.include_router(build_health_router(health))
+    app.include_router(chat.router)
     app.state.settings = settings
     return app
 

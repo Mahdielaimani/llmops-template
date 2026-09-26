@@ -340,23 +340,41 @@ http.server.request
  └─ guard.output
 ```
 
-### Metrics (Prometheus, Phase 22)
-| Metric | Type | Labels |
-|---|---|---|
-| `llmops_request_duration_seconds` | histogram | route, status, model_version |
-| `llmops_ttft_seconds` | histogram | route, model_version, prompt_version |
-| `llmops_itl_seconds` | histogram | model_version |
-| `llmops_tpot_seconds` | histogram | model_version |
-| `llmops_tokens_total` | counter | direction(in\|out), model_version |
-| `llmops_tokens_per_second` | gauge | model_version |
-| `llmops_queue_depth` / `llmops_queue_wait_seconds` | gauge / histogram | queue |
-| `llmops_inflight_requests` | gauge | route |
-| `llmops_gpu_vram_bytes` / `llmops_gpu_utilization` | gauge | gpu |
-| `llmops_kv_cache_utilization` | gauge | model_version |
-| `llmops_cost_usd_total` | counter | provider, model_version |
-| `llmops_retrieval_duration_seconds` | histogram | stage(embed\|vector\|bm25\|rerank) |
-| `llmops_agent_iterations` / `llmops_tool_calls_total` | histogram / counter | agent, tool, outcome |
-| `llmops_cache_hits_total` | counter | cache(exact\|embedding\|semantic) |
+### Metrics and attributes (Phase 22)
+
+Names follow the OpenTelemetry GenAI semantic conventions where those define
+one, and a custom namespace where they do not. The split is fixed by
+**[ADR-017](adr/ADR-017-otel-genai-semconv.md)**; that ADR's table is the
+contract, not this summary.
+
+| Concept | Name | Type | Source |
+|---|---|---|---|
+| Model requested | `gen_ai.request.model` | attribute | semconv |
+| Finish reason | `gen_ai.response.finish_reason` | attribute | semconv |
+| Prompt / completion tokens | `gen_ai.usage.input_tokens` / `.output_tokens` | attribute | semconv |
+| LLM call duration | `gen_ai.client.operation.duration` | histogram | semconv |
+| Token usage | `gen_ai.client.token.usage` | histogram | semconv |
+| **Time to first token** | `llm.ttft_ms` | histogram | **custom — no semconv name** |
+| Time per output token | `llm.tpot_ms` | histogram | custom |
+| Inter-token latency | `llm.itl_ms` | histogram | custom |
+| Output token rate | `llm.tokens_per_second` | gauge | custom |
+| HTTP request duration | `llmops_request_duration_seconds` | histogram | custom (route-level, not LLM-level) |
+| In-flight requests | `llmops_inflight_requests` | gauge | custom |
+| Queue depth / wait | `llmops_queue_depth` / `llmops_queue_wait_seconds` | gauge / histogram | custom |
+| **KV-cache pressure** | `vllm:request_num_preemptions` | histogram | **upstream vLLM ≥ 0.30.0** |
+| vLLM iteration tokens | `vllm:iteration_tokens_total` | counter | upstream |
+| GPU VRAM / utilisation | `llmops_gpu_vram_bytes` / `llmops_gpu_utilization` | gauge | custom (exporter) |
+| Retrieval stage latency | `llmops_retrieval_duration_seconds{stage}` | histogram | custom |
+| Agent iterations / tool calls | `llmops_agent_iterations` / `llmops_tool_calls_total` | histogram / counter | custom — semconv agent conventions still settling |
+| Cache hits | `llmops_cache_hits_total{cache}` | counter | custom |
+| Cost | `llmops_cost_usd_total{provider}` | counter | custom |
+
+Version labels on every series: `model_version`, `prompt_version`,
+`index_version`, `release_id` (see [versioning.md](versioning.md)).
+
+**KV-cache pressure is measured, not derived.** vLLM v0.30.0 (2026-09-22) emits
+`vllm:request_num_preemptions`; §8 called GPU-utilisation percentage the
+misleading signal, and a preemption count is the honest one.
 
 **Cardinality rule:** never label by `request_id`, `user_id`, or raw query.
 Those belong in traces and logs, not in metric labels.

@@ -16,7 +16,8 @@ Guiding rule: **measure → find the bottleneck → optimize → scale the bottl
 |---|---|
 | 0 Environment audit + architecture | done — [docs/environment.md](docs/environment.md), [docs/architecture.md](docs/architecture.md), [docs/roadmap.md](docs/roadmap.md) |
 | 1 Repository + engineering foundation | done — this README, `llmops-core`, `llm-application`, Compose `core` profile |
-| 2 Basic LLM application (`/chat`) | next |
+| 2 Basic LLM application (`/chat`) | done — provider abstraction, SSE streaming, TTFT/TPOT/ITL |
+| 3 Classical ML serving comparison | next |
 
 Full plan: [docs/roadmap.md](docs/roadmap.md). Decisions: [docs/adr/](docs/adr/).
 
@@ -37,8 +38,21 @@ uv run poe check              # lint + mypy --strict + unit tests
 uv run poe up                 # docker compose --profile core up -d --build
 curl -i http://localhost:8080/health/live
 curl -s http://localhost:8080/health/ready | jq
+
+# POST /chat — ungrounded chat, mock provider by default
+curl -s localhost:8080/chat -H 'content-type: application/json'   -d '{"messages":[{"role":"user","content":"hello"}],"max_tokens":8}' | jq
+
+# streaming (SSE): deltas, then a terminal `done` event carrying the telemetry
+curl -N localhost:8080/chat -H 'content-type: application/json'   -d '{"messages":[{"role":"user","content":"hello"}],"stream":true}'
+
 uv run poe down
 ```
+
+`/chat` returns `answer`, `request_id`, `model`, `finish_reason`, `latency_ms`,
+`ttft_ms`, `tpot_ms`, `tokens_per_second`, token counts, and `grounded: false` —
+it is ungrounded by contract; `/rag` (Phase 8) is the grounded path. Token counts
+and `ttft_ms` are `null` when the provider does not report them rather than
+estimated, because a guessed number corrupts the cost model.
 
 Linux/CI: `make check`, `make up` (delegates to the same `poe` tasks).
 

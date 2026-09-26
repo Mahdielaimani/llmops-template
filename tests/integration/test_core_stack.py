@@ -53,3 +53,34 @@ def test_stateful_services_reachable() -> None:
     but the published ports are (used by later phases' tooling)."""
     q = httpx.get("http://localhost:6333/healthz", timeout=3.0)
     assert q.status_code == 200
+
+
+def test_chat_roundtrip(http: httpx.Client) -> None:
+    r = http.post(
+        "/chat",
+        json={
+            "messages": [{"role": "user", "content": "what was q2 emea revenue versus plan"}],
+            "max_tokens": 6,
+        },
+        headers={"x-request-id": "it-chat"},
+    )
+    assert r.status_code == 200
+    b = r.json()
+    assert b["request_id"] == "it-chat"
+    assert b["output_tokens"] == 6  # max_tokens caps a reply that would be longer
+    assert b["total_tokens"] == b["input_tokens"] + 6
+    assert b["grounded"] is False
+
+
+def test_chat_streams_over_the_wire(http: httpx.Client) -> None:
+    """TestClient can fake streaming; only a real socket proves the response is not buffered."""
+    with http.stream(
+        "POST",
+        "/chat",
+        json={"messages": [{"role": "user", "content": "stream me"}], "stream": True},
+    ) as r:
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("text/event-stream")
+        events = [line for line in r.iter_lines() if line.startswith("event:")]
+    assert events[-1] == "event: done"
+    assert events.count("event: delta") > 1

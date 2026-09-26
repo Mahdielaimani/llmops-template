@@ -65,6 +65,16 @@ kept side by side so the gap is explicit.
 | SLO-7 | Ingestion: 50-page PDF searchable within | ≤ 5 min | ≤ 2 min | job timestamps |
 | SLO-8 | Decode throughput (7B INT4) | ≥ 15 tok/s per stream | n/a (hardware) | `llm.tokens_per_second` |
 
+> **Open conflict — SLO-2 and SLO-3 versus the capacity model.**
+> [metrics-and-capacity.md](metrics-and-capacity.md) §10 predicts TTFT of
+> 1.5–2.5 s and end-to-end 9–12 s *at low load*, which meets or exceeds these
+> ceilings before any concurrency is applied. As written, SLO-2 and SLO-3 are
+> probably not achievable on an 8 GB GPU with a 7B model and 3 000 tokens of
+> context. Resolution is deferred to Phase 30, which measures rather than
+> argues; the candidate levers are a smaller model on the SLO path, a tighter
+> context budget, or prefix caching (§2 of that document). **Do not treat these
+> two numbers as committed until Phase 30 closes this note.**
+
 **Quality objectives** (offline eval set, gate for promotion):
 
 | ID | Metric | Threshold |

@@ -21,5 +21,7 @@ Numbering 001–010 follows the master prompt's list; 011+ are additional.
 | [014](ADR-014-a2a-agent-protocol.md) | A2A for agent-to-agent, alongside MCP | Accepted | 26b |
 | [015](ADR-015-release-manifest-versioning.md) | Nine versioned artifact classes + release manifest | Accepted | 10 → 35 |
 | [016](ADR-016-hitl-risk-tiers.md) | Risk tiers + durable human-in-the-loop interrupt | Accepted | 28b |
+| [017](ADR-017-otel-genai-semconv.md) | Adopt OTel GenAI semantic conventions where they exist | Accepted | 2 → 22 |
+| [018](ADR-018-provider-abstraction.md) | One provider interface for mock / local / external LLMs | Accepted | 2 |
 
 Template: [ADR-000-template.md](ADR-000-template.md)
