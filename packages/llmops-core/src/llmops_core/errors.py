@@ -1,12 +1,5 @@
-"""Uniform error envelope for every service.
-
-Shape (stable contract for clients, gateway, and tests)::
-
-    {"error": {"code": "upstream_timeout", "message": "...", "request_id": "..."}}
-
-Business code raises :class:`ApiError` subclasses; unexpected exceptions are
-converted to a 500 without leaking internals. Clients never see stack traces.
-"""
+"""One error shape for every service, framework errors included:
+{"error": {"code", "message", "request_id", "details"}}."""
 
 from __future__ import annotations
 
@@ -43,11 +36,6 @@ class ApiError(Exception):
         super().__init__(message)
         self.message = message
         self.details = details
-
-
-class ValidationError(ApiError):
-    status_code = 422
-    code = "validation_error"
 
 
 class NotFoundError(ApiError):
@@ -96,7 +84,6 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(StarletteHTTPException)
     async def _http_error(_: Request, exc: StarletteHTTPException) -> JSONResponse:
-        # Framework-raised (404 unknown route, 405, auth deps) → same envelope as ours.
         code = {404: "not_found", 405: "method_not_allowed", 401: "unauthorized"}.get(
             exc.status_code, "http_error"
         )

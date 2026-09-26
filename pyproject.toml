@@ -65,6 +65,7 @@ ps = "docker compose ps"
 # ---------------------------------------------------------------------------
 [tool.ruff]
 line-length = 100
+extend-exclude = ["docs", "*.md"]
 target-version = "py312"
 src = ["packages/*/src", "apps/*/src", "services/*/src", "tests"]
 

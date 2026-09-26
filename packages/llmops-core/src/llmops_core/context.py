@@ -1,22 +1,15 @@
-"""Request-scoped context: request_id propagation.
-
-The ``X-Request-ID`` header is the correlation key across gateway → app →
-model-gateway → inference. In Phase 16 Kong's ``correlation-id`` plugin
-generates it at the edge; until then the app generates it itself.
-
-Implementation is ASGI-level (not ``BaseHTTPMiddleware``) so it works
-correctly with streaming responses (SSE) added in Phase 2.
-"""
+"""X-Request-ID propagation. Pure ASGI, not BaseHTTPMiddleware, which buffers
+the response body and would break token streaming."""
 
 from __future__ import annotations
 
 import contextvars
 import time
 import uuid
-from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
 import structlog
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from llmops_core.logging import get_logger
 
@@ -25,30 +18,19 @@ _MAX_REQUEST_ID_LEN = 128
 
 _request_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("request_id", default=None)
 
-Scope = MutableMapping[str, Any]
-Receive = Callable[[], Awaitable[MutableMapping[str, Any]]]
-Send = Callable[[MutableMapping[str, Any]], Awaitable[None]]
-ASGIApp = Callable[[Scope, Receive, Send], Awaitable[None]]
-
 
 def get_request_id() -> str | None:
     return _request_id.get()
 
 
-def new_request_id() -> str:
+def _sanitize(raw: str | None) -> str:
+    """Trust a client-supplied id only if short and printable — it reaches the logs."""
+    if raw and len(raw) <= _MAX_REQUEST_ID_LEN and raw.isprintable():
+        return raw
     return uuid.uuid4().hex
 
 
-def _sanitize(raw: str | None) -> str:
-    """Accept a client-supplied id only if it is short and printable; else mint one."""
-    if raw and len(raw) <= _MAX_REQUEST_ID_LEN and raw.isprintable():
-        return raw
-    return new_request_id()
-
-
 class RequestContextMiddleware:
-    """Assigns request_id, binds it to log context, echoes it back, logs one access line."""
-
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
         self.log = get_logger("http")
@@ -68,9 +50,9 @@ class RequestContextMiddleware:
             path=scope.get("path"),
         )
         started = time.perf_counter()
-        status_code = 500
+        status_code = 500  # stays 500 if the app dies before sending response.start
 
-        async def send_wrapper(message: MutableMapping[str, Any]) -> None:
+        async def send_wrapper(message: Any) -> None:
             nonlocal status_code
             if message["type"] == "http.response.start":
                 status_code = message["status"]

@@ -1,9 +1,3 @@
-"""FastAPI application factory for llm-application.
-
-Phase 1: health endpoints, request context, error envelope, config surface.
-Phase 2 adds ``/chat``; Phase 8 adds ``/rag``; Phase 24 adds ``/agent``.
-"""
-
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
@@ -28,8 +22,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     health = HealthRegistry(service=settings.app.name)
-    # Phase 1: no external dependencies wired yet → readiness == liveness.
-    # Phase 8+ registers postgres / redis / qdrant / model-gateway checks here.
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -53,7 +45,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_error_handlers(app)
     app.include_router(build_health_router(health))
     app.state.settings = settings
-    app.state.health = health
     return app
 
 

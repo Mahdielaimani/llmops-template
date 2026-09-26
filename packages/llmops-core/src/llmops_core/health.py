@@ -1,19 +1,5 @@
-"""Liveness / readiness primitives.
-
-Liveness  (``/health/live``)  — "is the process alive?"  Never checks
-dependencies; a failing dependency must not get the pod restarted.
-
-Readiness (``/health/ready``) — "can this instance take traffic *now*?"
-Runs registered dependency checks (Postgres, Redis, Qdrant, model server…)
-with a short timeout each. Failing readiness pulls the instance out of the
-load balancer / K8s Service without killing it.
-
-Startup   (K8s ``startupProbe``) — reuses readiness with a long
-``failureThreshold``; matters for LLM servers whose model load takes minutes.
-
-Checks are registered by each service at startup; the core only provides the
-registry, the aggregation, and the HTTP router.
-"""
+"""Health probes. Liveness never touches dependencies — a Redis outage must
+drain a replica, not restart it."""
 
 from __future__ import annotations
 
@@ -63,7 +49,7 @@ class HealthRegistry:
             err: str | None = None
         except TimeoutError:
             st, err = "timeout", f"exceeded {timeout_s}s"
-        except Exception as exc:  # any failure = not ready; message is enough
+        except Exception as exc:
             st, err = "fail", f"{type(exc).__name__}: {exc}"
         return CheckResult(
             name=name,

@@ -1,13 +1,5 @@
-"""Structured JSON logging with request-scoped context.
-
-One line per event, machine-parseable, always carrying ``request_id`` (and
-later ``trace_id``) when set via :mod:`llmops_core.context`. Stdlib loggers
-from third-party libraries (uvicorn, httpx) are routed through the same
-formatter so the whole process emits one log shape.
-
-Secrets policy: never pass raw settings objects or headers to the logger;
-``SecretStr`` fields render as ``**********`` by design.
-"""
+"""JSON logging. One shape for the whole process — stdlib loggers from uvicorn
+and httpx go through the same formatter, so nothing emits a second format."""
 
 from __future__ import annotations
 
@@ -25,7 +17,7 @@ _service_name = "app"
 
 
 def _redact_secrets(_: Any, __: str, event_dict: EventDict) -> EventDict:
-    """Defensive belt-and-braces: mask obviously sensitive keys even if a caller slips."""
+    """Last line of defence, not the policy: do not log secrets in the first place."""
     for key in list(event_dict):
         if key.lower() in _REDACT_KEYS or key.lower().endswith(("_key", "_secret", "_token")):
             event_dict[key] = "***REDACTED***"
@@ -33,21 +25,14 @@ def _redact_secrets(_: Any, __: str, event_dict: EventDict) -> EventDict:
 
 
 def _add_service_fields(_: Any, __: str, event_dict: EventDict) -> EventDict:
-    # Process-level fields live here, not in contextvars: request middleware clears
-    # contextvars per request and must not be able to drop them.
+    # Not contextvars: the request middleware clears those and would drop these.
     event_dict.setdefault("service", _service_name)
     event_dict.setdefault("version", __version__)
     return event_dict
 
 
 def configure_logging(*, level: str = "INFO", fmt: str = "json", service: str = "app") -> None:
-    """Configure structlog + stdlib logging once at process start.
-
-    Args:
-        level: root log level name.
-        fmt: ``json`` for machines (default, containers) or ``console`` for humans.
-        service: service name stamped on every event.
-    """
+    """Call once at process start. fmt=console is for humans, json for everything else."""
     global _service_name
     _service_name = service
 
@@ -87,8 +72,7 @@ def configure_logging(*, level: str = "INFO", fmt: str = "json", service: str = 
     root.addHandler(handler)
     root.setLevel(level)
 
-    # Route uvicorn's own loggers through our handler; drop its default access log
-    # because our request middleware emits a richer one.
+    # Our middleware emits a richer access line than uvicorn's.
     for name in ("uvicorn", "uvicorn.error"):
         logging.getLogger(name).handlers.clear()
         logging.getLogger(name).propagate = True

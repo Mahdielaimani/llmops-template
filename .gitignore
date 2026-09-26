@@ -45,3 +45,11 @@ Thumbs.db
 
 # Node (Promptfoo)
 node_modules/
+
+# personal tooling, not part of the deliverable
+.claude/skills/skills-ma/
+.claude/skills/skill-ma2/
+.claude/skills/skill-ma-tech/
+.claude/agents/skills-ma.md
+.claude/agents/skill-ma2.md
+.claude/agents/skill-ma-tech.md

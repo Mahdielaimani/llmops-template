@@ -1,11 +1,5 @@
-"""Typed configuration loaded from environment variables (12-factor).
-
-Every setting has a safe local default so the mock provider works with zero
-configuration. Secrets are `SecretStr` so they never appear in logs or repr.
-
-Environment mapping uses the prefix ``LLMOPS_`` and ``__`` as nesting
-delimiter, e.g. ``LLMOPS_SERVER__PORT=8080``, ``LLMOPS_LLM__PROVIDER=vllm``.
-"""
+"""Settings from the environment: LLMOPS_ prefix, __ for nesting
+(LLMOPS_SERVER__PORT, LLMOPS_LLM__PROVIDER)."""
 
 from __future__ import annotations
 
@@ -26,7 +20,7 @@ class Environment(StrEnum):
 
 
 class LLMProviderKind(StrEnum):
-    """MODE C = mock, MODE B = vllm/ollama (local), MODE A = openai/anthropic (external)."""
+    """mock = MODE C, vllm/ollama = MODE B (local), openai/anthropic = MODE A."""
 
     MOCK = "mock"
     VLLM = "vllm"
@@ -43,16 +37,14 @@ class AppSettings(BaseModel):
 
 
 class ServerSettings(BaseModel):
-    host: str = "0.0.0.0"  # noqa: S104 — container default; bind narrowed by compose/K8s
+    host: str = "0.0.0.0"  # noqa: S104 — container binds all interfaces; compose/K8s narrows it
     port: int = Field(default=8080, ge=1, le=65535)
-    # Hard ceiling for any single request; per-route timeouts stay below this.
-    request_timeout_s: float = Field(default=60.0, gt=0)
 
 
 class LLMSettings(BaseModel):
     provider: LLMProviderKind = LLMProviderKind.MOCK
     model: str = "mock-1"
-    base_url: str | None = None  # OpenAI-compatible endpoint (vLLM/Ollama/external)
+    base_url: str | None = None  # OpenAI-compatible endpoint
     api_key: SecretStr | None = None
     timeout_s: float = Field(default=30.0, gt=0)
     max_tokens: int = Field(default=512, ge=1)
@@ -84,8 +76,6 @@ class QdrantSettings(BaseModel):
 
 
 class Settings(BaseSettings):
-    """Root settings object. Instantiate via :func:`get_settings`."""
-
     model_config = SettingsConfigDict(
         env_prefix="LLMOPS_",
         env_nested_delimiter="__",
@@ -105,5 +95,5 @@ class Settings(BaseSettings):
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    """Cached singleton. Tests call ``get_settings.cache_clear()`` after patching env."""
+    """Cached; tests must call get_settings.cache_clear() after patching the environment."""
     return Settings()
