@@ -86,7 +86,9 @@ async def test_mock_timings_separate_prefill_from_decode() -> None:
     req = ChatRequest(messages=[Message(role="user", content="a b c d e")], max_tokens=5)
     result = await p.complete(req)
     assert result.timings.ttft_ms is not None
-    assert result.timings.ttft_ms >= 50
+    # asyncio.sleep(0.05) can return a hair under 50 ms on Windows clock resolution,
+    # so assert the prefill delay is reflected rather than an exact floor.
+    assert result.timings.ttft_ms >= 45
     assert result.timings.total_ms > result.timings.ttft_ms
     assert result.timings.tpot_ms is not None
     assert result.timings.tokens_per_second is not None

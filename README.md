@@ -19,12 +19,15 @@ Guiding rule: **measure → find the bottleneck → optimize → scale the bottl
 | 2 Basic LLM application (`/chat`) | done — provider abstraction, SSE streaming, TTFT/TPOT/ITL |
 | 3 Classical ML serving comparison | done — [docs/classical-ml-vs-llm-serving.md](docs/classical-ml-vs-llm-serving.md) |
 | 4 Transformer inference concepts | done — [docs/inference.md](docs/inference.md) |
-| 5 Prefill / decode / KV cache | next |
+| 5 Prefill / decode / KV cache | done — [prefill-decode.md](docs/prefill-decode.md), [kv-cache.md](docs/kv-cache.md) |
+| 6 LLM serving + vLLM | next — **needs disk cleanup**, see [environment.md](docs/environment.md) §7.3 |
 
 Full plan: [docs/roadmap.md](docs/roadmap.md). Decisions: [docs/adr/](docs/adr/).
 
 Design references:
 - [docs/security.md](docs/security.md) — seven enforcement points, 14-threat model, trust boundaries, and technology alternatives with trade-offs
+- [docs/kv-cache.md](docs/kv-cache.md) — the concurrency ceiling: 56 KiB/token, 11 sequences at 4k context, and why PagedAttention exists
+- [docs/prefill-decode.md](docs/prefill-decode.md) — two phases, two bottlenecks; the KV cache proved exact
 - [docs/inference.md](docs/inference.md) — tokenization, embeddings, attention, Q/K/V, logits and sampling, measured from runnable experiments
 - [docs/metrics-and-capacity.md](docs/metrics-and-capacity.md) — latency / TTFT / ITL / TPOT / throughput / VRAM / cost formulas, worked examples on this GPU, and the metric+span naming map
 - [docs/agent-platform.md](docs/agent-platform.md) — MCP vs A2A, fan-out/join, skills, verification (L1–L4), HITL risk tiers
