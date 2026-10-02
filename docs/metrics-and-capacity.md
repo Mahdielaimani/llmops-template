@@ -226,6 +226,10 @@ one instead of ~60 % of it.
 ## 6. Token accounting
 
 ```
+# Measured, Phase 4: financial text runs 2.34 chars/token against 5.70 for prose,
+# so a 400-token chunk of financial text holds ~940 characters where prose holds
+# ~2280. Token budgets derived from character counts are wrong by ~2.4x here.
+# See docs/inference.md §1.
 P = tok(system_prompt) + tok(prompt_template) + tok(history)
   + Σ_{i=1..k} tok(chunk_i) + tok(user_query)
 

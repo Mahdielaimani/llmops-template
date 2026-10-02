@@ -18,11 +18,13 @@ Guiding rule: **measure → find the bottleneck → optimize → scale the bottl
 | 1 Repository + engineering foundation | done — this README, `llmops-core`, `llm-application`, Compose `core` profile |
 | 2 Basic LLM application (`/chat`) | done — provider abstraction, SSE streaming, TTFT/TPOT/ITL |
 | 3 Classical ML serving comparison | done — [docs/classical-ml-vs-llm-serving.md](docs/classical-ml-vs-llm-serving.md) |
-| 4 Transformer inference concepts | next |
+| 4 Transformer inference concepts | done — [docs/inference.md](docs/inference.md) |
+| 5 Prefill / decode / KV cache | next |
 
 Full plan: [docs/roadmap.md](docs/roadmap.md). Decisions: [docs/adr/](docs/adr/).
 
 Design references:
+- [docs/inference.md](docs/inference.md) — tokenization, embeddings, attention, Q/K/V, logits and sampling, measured from runnable experiments
 - [docs/metrics-and-capacity.md](docs/metrics-and-capacity.md) — latency / TTFT / ITL / TPOT / throughput / VRAM / cost formulas, worked examples on this GPU, and the metric+span naming map
 - [docs/agent-platform.md](docs/agent-platform.md) — MCP vs A2A, fan-out/join, skills, verification (L1–L4), HITL risk tiers
 - [docs/versioning.md](docs/versioning.md) — nine versioned artifact classes and the release manifest

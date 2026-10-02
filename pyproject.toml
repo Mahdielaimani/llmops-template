@@ -20,6 +20,10 @@ dev = [
     "mypy>=1.13",
     "poethepoet>=0.30",
     "httpx2>=2.13.0",
+    # Phase 4 inference experiments: real GPT-2 tokenizer, no torch.
+    # Mechanics are implemented in numpy so every matmul is visible; torch and real
+    # weights arrive in Phase 6 with the GPU, where the disk budget belongs.
+    "tokenizers>=0.20",
 ]
 
 # ---------------------------------------------------------------------------
@@ -92,13 +96,16 @@ ignore = ["S101"]  # assert allowed in tests
 "scripts/**" = ["T20"]
 "benchmarks/**" = ["T20"]
 "**/train.py" = ["T20"]
+# Teaching scripts: the printed output IS the deliverable, and they import a
+# sibling module after a sys.path insert, which E402 cannot express.
+"inference/experiments/**" = ["T20", "E402", "ANN001"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 warn_unreachable = true
 plugins = ["pydantic.mypy"]
-mypy_path = "packages/llmops-core/src:apps/llm-application/src"
+mypy_path = "packages/llmops-core/src:apps/llm-application/src:apps/classical-ml/src"
 namespace_packages = true
 explicit_package_bases = true
 

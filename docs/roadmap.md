@@ -27,7 +27,7 @@ vLLM only in Docker, no `make`, internet currently offline.
 
 | # | Phase | Status | Key deliverables | Gate to next |
 |---|---|---|---|---|
-| 4 | Transformer inference concepts | ☐ | `inference/experiments/` with tiny HF model: tokenizer → embeddings → attention → logits → sampling; `docs/inference.md` | notebook-free scripts run on CPU |
+| 4 | Transformer inference concepts | ☑ | `inference/experiments/` with tiny HF model: tokenizer → embeddings → attention → logits → sampling; `docs/inference.md` | notebook-free scripts run on CPU |
 | 5 | Prefill / Decode / KV Cache | ☐ | measured prefill vs decode, KV memory vs context/concurrency plots; `docs/prefill-decode.md`, `docs/kv-cache.md` | graphs in `benchmarks/` |
 | 6 | LLM serving + vLLM | ☐ | `inference/vllm/` compose service (GPU), Qwen2.5-1.5B then 7B-AWQ, OpenAI-compatible endpoint, startup probe; ADR-006 | **needs: disk cleanup, internet, model download** |
 | 7 | Streaming + inference metrics | ☐ | TTFT / ITL / TPOT / tok/s instrumentation in provider; `benchmarks/` harness | metrics visible in `/chat` response + logs |
@@ -37,7 +37,7 @@ vLLM only in Docker, no `make`, internet currently offline.
 | # | Phase | Status | Key deliverables | Gate to next |
 |---|---|---|---|---|
 | 8 | RAG | ☐ | ingestion pipeline (parse/clean/chunk/metadata/version), Qdrant, embedding-service, `/rag` with citations; `docs/rag.md`; ADR-002 | grounded answer with citations on sample financial docs |
-| 9 | Hybrid retrieval + reranking | ☐ | BM25 + RRF fusion + CPU cross-encoder; configurable weights; ADR-003, ADR-004 | vector vs hybrid vs hybrid+rerank comparison |
+| 9 | Hybrid retrieval + reranking | ☐ | BM25 + RRF fusion + CPU cross-encoder; configurable weights; **chunk sizing must account for 2.34 chars/token on financial text (Phase 4)**; ADR-003, ADR-004 | vector vs hybrid vs hybrid+rerank comparison |
 | 10 | Prompt / model versioning | ☐ | `prompts/` registry (immutable released files + semver + stage pointers), `models/registry.yaml`, promote/rollback commands; first 3 of the 9 artifact classes in `docs/versioning.md` | rollback demo; CI fails on edit of a released prompt file |
 | 11 | Evaluation | ☐ | `data/evaluation/` dataset, retrieval metrics (Recall@K, MRR, ...), generation metrics, `docs/evaluation.md` | baseline report |
 | 12 | LLM-as-a-Judge | ☐ | judge prompts, bias/calibration doc, human-vs-judge comparison | **needs: external API key (recommended)** |
@@ -116,6 +116,7 @@ vLLM only in Docker, no `make`, internet currently offline.
 ## Change log
 
 - 2026-09-14 — Phase 0 complete: audit, mode decision (HYBRID), roadmap created.
+- 2026-10-02 — Phase 4 complete: 5 runnable experiments in `inference/experiments/` (real GPT-2 tokenizer, numpy attention and forward pass) + `docs/inference.md` from measured output. **Finding that changes the capacity model:** financial text tokenizes at 2.34 chars/token against 5.70 for prose, so a fixed context budget retrieves ~2.4x less information from financial documents than the generic estimate assumed — feeds chunk sizing in Phase 9. torch deferred to Phase 6 (disk at 98%). 63 unit tests.
 - 2026-10-01 — Phase 3 complete: `classical-ml` service (/predict, /predict/batch, /model), versioned 997-byte artifact with its own metrics and sha256, `benchmarks/compare_serving.py`, `docs/classical-ml-vs-llm-serving.md` written from measured numbers. **Measurement finding:** ~43 ms of every host-side request is Docker Desktop's WSL2 port proxy, identical across endpoints — benchmarks now run inside the Compose network and every handler reports its own `latency_ms`. Phase 30 load tests must follow the same rule. 48 unit tests.
 - 2026-09-26 — Phase 2 complete: `POST /chat` with provider abstraction (mock / OpenAI-compatible for vLLM+Ollama+OpenAI), SSE streaming, TTFT/TPOT/ITL measurement, upstream-status mapping, no retries by design. Telemetry adopts OTel GenAI semconv from the first line of instrumentation (ADR-017); provider interface recorded in ADR-018. 33 unit tests. SLO-2/SLO-3 conflict flagged in business-requirements.md pending Phase 30.
 - 2026-09-24 — Scope additions after review: A2A (26b), skills registry (27a), fan-out/join (27b), verification (28a), HITL risk tiers (28b); release manifest folded into 35. New docs: `metrics-and-capacity.md` (latency/TTFT/ITL/TPOT/throughput/VRAM/cost formulas + instrumentation map), `agent-platform.md`, `versioning.md`. ADR-014/015/016.
