@@ -29,7 +29,7 @@ that depend on them (SLOs, capacity) are marked *TBD-P1* below.
 The master-prompt target has two GPUs and multiple model servers. This
 laptop has one 8 GB GPU. Adaptation is explicit; nothing is pretended.
 
-```
+```text
                           USERS  (curl / Locust / small web client)
                             |
                             v
@@ -141,7 +141,7 @@ CROSS-CUTTING
 ## 3. Layer map (who owns what)
 
 | Layer | Component | Tech (local) | Introduced in phase |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 1 Client | curl, Locust, tests | — | 2 |
 | 2 Edge/Ingress | proxy listener / ingress | Kong proxy :8080; Kong Ingress Controller on K8s | 16 (Compose), 32 (K8s) |
 | 3 API Gateway | Kong Route + Service + plugins (`infrastructure/kong/kong.yml`) | Kong OSS 3.x DB-less | 16 |
@@ -272,7 +272,7 @@ real-world equivalent described.
 
 ### 5.1 Synchronous RAG query (target state)
 
-```
+```text
 client ─► Kong :8080 [Route → plugins: jwt, acl, rate-limiting,
    │        correlation-id, otel] ─► Kong Upstream (LB, health-checked)
    │        ─► app-api-N ─► rag-service
@@ -299,7 +299,7 @@ Every hop emits an OTel span; the trace shows exactly where time goes
 
 ### 5.2 Asynchronous ingestion
 
-```
+```text
 POST /documents  ─► gateway ─► app-api ─► enqueue(job) ─► 202 {job_id}
                                              │
                                   Redis queue ▼  (depth = backpressure signal)
@@ -312,7 +312,7 @@ GET /jobs/{id} ─► status
 
 ### 5.3 Agentic path
 
-```
+```text
 /agent ─► agent-service: plan → (tool call?) → authorization check ◄── app decides, not LLM
         → tool exec (retrieval / calc / SQL / MCP) → observe → loop (max_iter, budget)
         → final answer; each step traced; multi-agent supervisor adds delegation depth limit
@@ -332,7 +332,7 @@ flight at burst versus ~11 slots → queue and load-shedding are arithmetic
 necessities, not design taste.
 
 | Stage | Expected on this machine | Why |
-|---|---|---|
+| --- | --- | --- |
 | Gateway / LB / API | µs–ms, scales with replicas | stateless, CPU plentiful |
 | Embedding (CPU) | 20–80 ms / query | small model, 24 threads |
 | Qdrant | 5–20 ms | small corpus |

@@ -23,7 +23,7 @@ that is measured continuously rather than assumed.
 ## 2. Users and roles (assumption)
 
 | Role | Count | Typical need | Access |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Analyst | ~150 | "What was Q2 EMEA revenue vs plan?" | public + own-department docs |
 | Manager | ~40 | comparisons across quarters, summaries | + department-restricted |
 | Finance lead / CFO office | ~10 | sensitive: forecasts, M&A, comp | + confidential |
@@ -35,7 +35,7 @@ that is measured continuously rather than assumed.
 ## 3. Functional requirements
 
 | ID | Requirement |
-|---|---|
+| --- | --- |
 | FR-1 | Ingest PDF / DOCX / Markdown / CSV financial documents via API; asynchronous with job status. |
 | FR-2 | Every document has an id, version, owner, classification (`public`, `internal`, `restricted`, `confidential`), effective date. Re-upload creates a new version; old versions stay queryable by admins. |
 | FR-3 | Answer natural-language questions (`/rag`) grounded in retrieved passages; every factual claim carries a citation (`doc_id`, `version`, `chunk_id`, page/section). |
@@ -55,7 +55,7 @@ Local SLOs are what this lab must meet on the audited machine (RTX 4070
 kept side by side so the gap is explicit.
 
 | ID | Metric | Local SLO (lab) | Prod target | How measured |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | SLO-1 | Availability (`/rag`, `/chat`) | 99.0 % over a load-test window | 99.9 % monthly | Prometheus: `1 - 5xx/total` |
 | SLO-2 | RAG **TTFT** p95 (streaming) | ≤ 2.0 s | ≤ 1.0 s | span `llm.first_token` |
 | SLO-3 | RAG end-to-end p95, ≤ 300 output tokens | ≤ 12 s at 20 concurrent | ≤ 6 s at 200 concurrent | histogram `http_request_duration` |
@@ -78,7 +78,7 @@ kept side by side so the gap is explicit.
 **Quality objectives** (offline eval set, gate for promotion):
 
 | ID | Metric | Threshold |
-|---|---|---|
+| --- | --- | --- |
 | Q-1 | Retrieval Recall@5 | ≥ 0.80 |
 | Q-2 | Retrieval MRR | ≥ 0.65 |
 | Q-3 | Faithfulness (judge + spot-checked by human) | ≥ 0.85 |
@@ -90,7 +90,7 @@ kept side by side so the gap is explicit.
 **Cost objectives** (assumption, tracked from Phase 15):
 
 | Item | Target |
-|---|---|
+| --- | --- |
 | Cost per RAG request, local GPU | report as GPU-seconds × amortised $/h |
 | Cost per RAG request, external API | ≤ $0.01 at ≤ 4k input / 300 output tokens |
 | Judge cost per eval run | ≤ $1 for the 100-item set |
@@ -98,7 +98,7 @@ kept side by side so the gap is explicit.
 ## 5. Security requirements
 
 | ID | Requirement |
-|---|---|
+| --- | --- |
 | SEC-1 | Authentication on every route except health; JWT with role + department + clearance claims (issued by a stub IdP locally, real IdP in prod). |
 | SEC-2 | Authorization = ACL filter applied at retrieval (Qdrant payload filter + BM25 filter) and re-checked before context assembly. The model never sees a disallowed chunk. |
 | SEC-3 | Tool calls are authorized by the application per user/role; the model may *request*, never *execute*. |
@@ -130,7 +130,7 @@ kept side by side so the gap is explicit.
 ## 8. Capacity assumptions → what they imply
 
 | Assumption | Implication |
-|---|---|
+| --- | --- |
 | 5 req/s burst × ~6 s each ≈ 30 in flight | GPU handles ~8–12 concurrent decodes at 7B INT4 / 2.5 GB KV → **queue + concurrency cap mandatory** (Phase 21) |
 | 3 000-token context per request | KV per request ≈ 3k × 2 × layers × kv_heads × head_dim × 2 B — measured Phase 5; drives `max_num_seqs` |
 | 60 000 chunks × 1024-d fp32 | ≈ 250 MB in Qdrant — trivial; retrieval is not the bottleneck, reranking is |
@@ -140,7 +140,7 @@ kept side by side so the gap is explicit.
 ## 9. How requirements shape the architecture
 
 | Requirement | Architectural consequence |
-|---|---|
+| --- | --- |
 | FR-7 / SEC-2 / Q-6 | ACL lives in retrieval payloads and in the query filter; a security boundary *below* the model, not a prompt instruction |
 | FR-3 / Q-5 | chunks carry `doc_id/version/chunk_id/page`; context builder keeps a citation map; output guardrail validates it |
 | FR-2 | Postgres is the document/version system of record; Qdrant/BM25 are derived indexes, rebuildable |

@@ -24,7 +24,7 @@ ML wheels target 3.12.
 
 ## Alternatives considered
 | Option | Why not |
-|---|---|
+| --- | --- |
 | Polyrepo | version drift across services; 10× CI config; wrong for a lab |
 | pip + requirements.txt per service | no lock across members, slow, no workspace concept |
 | Poetry | slower resolver, workspace support immature vs uv |

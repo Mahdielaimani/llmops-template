@@ -45,7 +45,7 @@ Four decisions inside the interface that carry weight:
 
 ## Alternatives considered
 | Option | Why not |
-|---|---|
+| --- | --- |
 | LangChain / LiteLLM as the abstraction | another dependency to learn and debug for the one thing we need; hides TTFT/ITL measurement, which is the point of this phase; LiteLLM is a reasonable choice for the Phase 15 gateway and is revisited there |
 | Official `openai` SDK | works, but pulls a provider-branded client for a generic protocol, and its streaming types would leak into ours |
 | Build the model gateway now (Phase 15 early) | the gateway's value is routing, fallback and cost across providers — none of which exist yet with one provider and no cost data |

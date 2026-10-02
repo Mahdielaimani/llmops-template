@@ -36,7 +36,7 @@ any artifact is unpinned.
 
 ## Alternatives considered
 | Option | Why not |
-|---|---|
+| --- | --- |
 | Git sha alone | prompts/models/data/index can all move without a code change |
 | MLflow model registry only | covers models and runs; no home for corpus versions, index identity, agent/skill definitions |
 | DVC / LakeFS for everything | strong for data lineage, heavy for a laptop lab; we take the *idea* (content-addressed snapshots) without the dependency |

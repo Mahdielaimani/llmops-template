@@ -38,7 +38,7 @@ or crash loses every pending run.
 
 ## Alternatives considered
 | Option | Why not |
-|---|---|
+| --- | --- |
 | Prompt the model to "ask before risky actions" | the model is not a control; one injected instruction removes it |
 | Approve per agent / per session | blanket consent; the risky action is a property of the action, not the actor |
 | Block the coroutine and await approval in memory | holds a slot per pending approval; lost on restart; does not scale past a few |

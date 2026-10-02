@@ -13,7 +13,7 @@ project's cost model begins.
 Geometry used throughout is GPT-2 small's, so the figures are not invented:
 `vocab 50257 · d_model 768 · 12 layers · 12 heads · d_head 64 · d_ff 3072 · max_pos 1024`.
 
-```
+```text
 text ── tokenizer ──> ids ── embedding lookup ──> hidden states
                                                        │
                                         ┌──────────────┴──────────────┐
@@ -48,14 +48,14 @@ uv run python inference/experiments/05_forward_pass.py
 A token is neither a word nor a character. Measured with the real GPT-2 tokenizer:
 
 | Text | chars | tokens | **chars/token** |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `The company reported strong growth in the second quarter.` | 57 | 10 | **5.70** |
 | `Q2 FY2026 revenue was EUR 1,234,567.89, up 12.4% against plan of EUR 1,098,000.00.` | 82 | 35 | **2.34** |
 | `Invoice INV-2026-0004471 for cost centre CC-88213-EMEA, PO 4500931882.` | 70 | 28 | **2.50** |
 
 **Financial text costs 2.4× more tokens per character than prose.** One amount:
 
-```
+```text
 1,234,567.89  ->  ['27526','352','11','24409','11','20','3134','13','4531']   9 tokens
 ```
 
@@ -70,7 +70,7 @@ where 400 tokens of prose holds **2 280**. At a fixed context budget you retriev
 **2.4× less information** from financial documents than the generic estimate
 implies. Measured budget for a realistic RAG request:
 
-```
+```text
 system prompt         12 tokens
 user query            11 tokens
 5 financial chunks   700 tokens  (140 each)
@@ -84,7 +84,7 @@ directly. This is why the chunking parameters are a versioned artifact
 
 ### Whitespace and casing are part of the token
 
-```
+```text
 'revenue'   -> [260, 4080]          ['re','venue']
 ' revenue'  -> [6426]               ['Ġrevenue']
 'Revenue'   -> [3041, 4080]         ['Re','venue']
@@ -106,14 +106,14 @@ Round-trip is lossless: `decode(encode(text)) == text`.
 ## 2. Embeddings — discrete becomes continuous
 
 | Table | Shape | Parameters |
-|---|---|---|
+| --- | --- | --- |
 | `wte` token embeddings | (50257, 768) | 38 597 376 |
 | `wpe` position embeddings | (1024, 768) | 786 432 |
 
 `wte` alone is **77 MB in fp16** — about 31% of GPT-2 small. Embedding is a row
 lookup, `wte[ids]`; no matmul, no FLOPs worth counting.
 
-```
+```text
 ids       (25,)
 tok_emb   (25, 768)      wte[ids]
 pos_emb   (25, 768)      wpe[0..24]
@@ -125,7 +125,7 @@ x         (25, 768)      tok_emb + pos_emb
 Attention is permutation-invariant. Measured, with the token order reversed:
 
 | | same result for reversed input? |
-|---|---|
+| --- | --- |
 | without position embeddings | **True** |
 | with position embeddings | **False** |
 
@@ -133,7 +133,7 @@ Without `wpe`, `revenue was 100` and `100 was revenue` are the same input.
 
 ### LayerNorm fixes scale, it does not shrink
 
-```
+```text
 norm before LayerNorm:    0.612
 norm after  LayerNorm:   27.432      (~sqrt(768) = 27.7)
 output mean: -1.42e-18   std: 0.9901
@@ -154,14 +154,14 @@ freed after the pass; K and V are **not**, during generation — that is the cac
 
 Three projections of the same input, each (768, 768):
 
-```
+```text
 x (15,768) @ Wq -> Q (15,768)
 x (15,768) @ Wk -> K (15,768)
 x (15,768) @ Wv -> V (15,768)
 ```
 
 | | Meaning | Belongs to |
-|---|---|---|
+| --- | --- | --- |
 | **Q** | what am I looking for | the **current** token |
 | **K** | what can I be found by | **every past** token |
 | **V** | what I contribute | **every past** token |
@@ -179,7 +179,7 @@ attends independently over the same tokens.
 ### The `√d_head` divisor is load-bearing
 
 | | std | max abs | softmax peak |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | raw `QKᵀ` | 8.015 | 32.029 | **0.8912** |
 | `/√64` | 1.002 | 4.004 | **0.2003** |
 
@@ -194,7 +194,7 @@ context and this quadruples. That is the `P²` term in the prefill formula.
 
 ### The causal mask
 
-```
+```text
 mask[0,  :5] = [  0. -inf -inf -inf -inf]   row 0 sees only itself
 mask[-1, :5] = [  0.    0.    0.    0.   0.]   last row sees all history
 ```
@@ -208,7 +208,7 @@ forward, its attention output does not change when a new token arrives.
 
 ### Output is a weighted sum of V
 
-```
+```text
 weights (12,15,15) @ V (12,15,64) -> (12,15,64)
 merge heads -> (15,768)  @ Wo -> (15,768)
 ```
@@ -217,13 +217,13 @@ Same shape in, same shape out. That invariance is what lets 12 blocks stack.
 
 ### What the cache buys — measured formula
 
-```
+```text
 KV per token per sequence = 2 (K,V) · 12 layers · 12 heads · 64 dim · 2 B
                           = 36 864 B = 36 KiB
 ```
 
 | Context | KV per sequence |
-|---|---|
+| --- | --- |
 | 512 | 18.9 MB |
 | 2 048 | 75.5 MB |
 | 4 096 | 151.0 MB |
@@ -244,7 +244,7 @@ precisely to cut this term.
 
 The unembedding is the widest matmul in the model:
 
-```
+```text
 hidden (768,) @ W_unembed (768, 50257) -> logits (50257,)
 ```
 
@@ -261,7 +261,7 @@ probabilities, and only their differences matter — verified:
 ### Temperature is distribution sharpness, not a creativity dial
 
 | T | max p | top-10 mass | entropy | effective choices |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | 0.01 | 0.99702 | 1.00000 | 0.020 | **1** |
 | 0.20 | 0.50561 | 0.99995 | 1.097 | 3 |
 | 0.70 | 0.20556 | 0.81028 | 2.980 | 20 |
@@ -276,7 +276,7 @@ tokens plausible. For grounded financial answers the lab defaults to `0.2`
 ### Determinism
 
 | | result |
-|---|---|
+| --- | --- |
 | greedy, 5 runs | `[14247] × 5` — **identical** |
 | sampled, 5 different seeds | `[32014, 25740, 13166, 4302, 47408]` — **different** |
 | sampled, seed 42, 3 runs | `[38909] × 3` — **identical** |
@@ -294,7 +294,7 @@ byte-identical probability.
 ### top-k is fixed, top-p adapts
 
 | Distribution | top-k=50 | top-p=0.9 |
-|---|---|---|
+| --- | --- | --- |
 | ordinary | 50 tokens | **247** tokens |
 | deliberately confident | 50 tokens | **1** token |
 
@@ -308,7 +308,7 @@ is the safer default.
 
 ### Parameter budget from the geometry
 
-```
+```text
 per block = 4·768·768 (QKVO) + 2·768·3072 (MLP) = 7 077 888
 embeddings                                        39 383 808
 12 blocks                                         84 934 656
@@ -320,7 +320,7 @@ Matches GPT-2 small's published ~124M.
 
 ### Shapes end to end
 
-```
+```text
 text              'Q2 FY2026 revenue was EUR 1,234,567.89, up 12.4% against plan.'
 ids               (25,)
 + embeddings      (25, 768)
@@ -343,7 +343,7 @@ performance profiles — measured in Phase 5.
 ### FLOPs: linear term vs quadratic term
 
 | P | dense `2·N·P` | attention `2·L·P²·d` | attention share |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 25 | 6.22 GFLOP | 0.01 GFLOP | **0.2%** |
 | 512 | 127.30 GFLOP | 4.83 GFLOP | **3.7%** |
 | 3 000 | 745.91 GFLOP | 165.89 GFLOP | **18.2%** |
@@ -355,7 +355,7 @@ why a 3 000-token context is still prefill-dominated there.
 ### Measured wall time — and a correction
 
 | P | best of 3 | ms/token | normalised |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 128 | 110.6 ms | 0.864 | 1.00× |
 | 256 | 638.9 ms | 2.496 | 2.89× |
 | 512 | 396.2 ms | 0.774 | 0.90× |
@@ -377,7 +377,7 @@ material — the same failure mode as the 43 ms port-proxy trap in Phase 3.
 ## 6. What carries into the rest of the platform
 
 | Concept here | Where it becomes operational |
-|---|---|
+| --- | --- |
 | `P` from real tokenization | prefill FLOPs, TTFT, API cost — `metrics-and-capacity.md` §2, §6, §7 |
 | financial text at 2.34 chars/token | chunk sizing, context budget, Phase 9 |
 | K/V reusable, Q not | KV cache — Phase 5 |

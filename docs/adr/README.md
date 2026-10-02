@@ -4,7 +4,7 @@ One file per decision, immutable once accepted (supersede with a new ADR).
 Numbering 001–010 follows the master prompt's list; 011+ are additional.
 
 | ADR | Title | Status | Phase |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [001](ADR-001-fastapi.md) | FastAPI for application services | Accepted | 1 |
 | 002 | Qdrant as vector database | Planned | 8 |
 | 003 | Hybrid retrieval | Planned | 9 |
@@ -23,5 +23,6 @@ Numbering 001–010 follows the master prompt's list; 011+ are additional.
 | [016](ADR-016-hitl-risk-tiers.md) | Risk tiers + durable human-in-the-loop interrupt | Accepted | 28b |
 | [017](ADR-017-otel-genai-semconv.md) | Adopt OTel GenAI semantic conventions where they exist | Accepted | 2 → 22 |
 | [018](ADR-018-provider-abstraction.md) | One provider interface for mock / local / external LLMs | Accepted | 2 |
+| [019](ADR-019-authorization-model.md) | RBAC for capabilities, ABAC for data, ACL as a query predicate, ACL-scoped cache | Accepted | 11 → 24 |
 
 Template: [ADR-000-template.md](ADR-000-template.md)

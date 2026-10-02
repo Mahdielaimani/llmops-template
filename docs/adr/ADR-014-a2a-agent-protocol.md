@@ -36,7 +36,7 @@ Adopt **A2A** for agent↔agent, keeping MCP for agent↔tool.
 
 ## Alternatives considered
 | Option | Why not |
-|---|---|
+| --- | --- |
 | Plain REST between agents | reinvents lifecycle, discovery, cancellation, streaming; no interop |
 | MCP for agent↔agent too | models a stateless tool call; no task state, no long-running/resumable semantics, no peer discovery |
 | A message bus only (Redis streams / Kafka) | good transport, but no request/response semantics, no discovery, no standard task states; we still use Redis for the blackboard |

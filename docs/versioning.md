@@ -11,7 +11,7 @@ Git" covers maybe 20 % of what moves in an LLM system.
 ## 1. The nine versioned artifact classes
 
 | # | Artifact | Version key | System of record | Rollback | Breaking? |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | 1 | Code | git sha | Git | revert + redeploy image | no |
 | 2 | Prompt | `name@semver` + content sha256 | `prompts/**` in Git, registry in MLflow | move the `production` pointer | no |
 | 3 | Model | `name:quant@revision` + weights sha | `models/registry.yaml` + MLflow | pointer swap in model-gateway | no |
@@ -73,7 +73,7 @@ Each artifact rolls back alone; that is the point of versioning them
 separately. Ranked by cost:
 
 | Change | Rollback | Time | Risk |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Prompt | move `production` pointer to previous version | seconds | low |
 | Agent / skill | pointer swap | seconds | low |
 | Model | model-gateway routes to previous model (kept warm if VRAM allows) | seconds–minutes | low |
@@ -93,7 +93,7 @@ flip the alias, keep the old collection until the next release is proven.
 
 ## 4. Index versioning and the alias flip
 
-```
+```text
 docs_v6  (bge-m3,  chunk 400/60)  ← alias `docs_current` (serving)
 docs_v7  (bge-m3,  chunk 512/64)  ← building, then evaluated
 
@@ -110,7 +110,7 @@ can never be confused about which embedding model or chunking produced it.
 
 ## 5. Prompt registry
 
-```
+```text
 prompts/rag/rag_answer/
   v3.1.0.md          # immutable once released
   v3.2.0.md
@@ -134,7 +134,7 @@ revision, weights hash, context length, VRAM estimate (from
 
 ## 6. Data versioning
 
-```
+```text
 Postgres: documents(doc_id, version, content_sha, classification, effective_date,
                     superseded_by, uploaded_by, uploaded_at)
 Object store: raw/{doc_id}/{version}/{filename}

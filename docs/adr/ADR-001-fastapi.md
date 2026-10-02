@@ -18,7 +18,7 @@ shared primitives from `llmops-core`.
 
 ## Alternatives considered
 | Option | Why not |
-|---|---|
+| --- | --- |
 | Flask / Django | WSGI, no native async or streaming; would block on every model call |
 | Litestar | comparable; smaller ecosystem, fewer examples for vLLM/OpenAI-compat tooling |
 | Go (Gin/Fiber) | faster per-request, but the bottleneck is the GPU not the API; splits the codebase from the ML tooling |

@@ -25,7 +25,7 @@ contextvars, because the request middleware clears contextvars per request
 
 ## Alternatives considered
 | Option | Why not |
-|---|---|
+| --- | --- |
 | stdlib `logging` + custom JSON formatter | no context binding; every call site must pass request_id explicitly |
 | `loguru` | pleasant API but weak stdlib interop; contextualisation less explicit |
 | `python-json-logger` | formatter only; still no context propagation |

@@ -13,7 +13,7 @@ Guiding rule: **measure → find the bottleneck → optimize → scale the bottl
 ## Current phase
 
 | Phase | Status |
-|---|---|
+| --- | --- |
 | 0 Environment audit + architecture | done — [docs/environment.md](docs/environment.md), [docs/architecture.md](docs/architecture.md), [docs/roadmap.md](docs/roadmap.md) |
 | 1 Repository + engineering foundation | done — this README, `llmops-core`, `llm-application`, Compose `core` profile |
 | 2 Basic LLM application (`/chat`) | done — provider abstraction, SSE streaming, TTFT/TPOT/ITL |
@@ -24,6 +24,7 @@ Guiding rule: **measure → find the bottleneck → optimize → scale the bottl
 Full plan: [docs/roadmap.md](docs/roadmap.md). Decisions: [docs/adr/](docs/adr/).
 
 Design references:
+- [docs/security.md](docs/security.md) — seven enforcement points, 14-threat model, trust boundaries, and technology alternatives with trade-offs
 - [docs/inference.md](docs/inference.md) — tokenization, embeddings, attention, Q/K/V, logits and sampling, measured from runnable experiments
 - [docs/metrics-and-capacity.md](docs/metrics-and-capacity.md) — latency / TTFT / ITL / TPOT / throughput / VRAM / cost formulas, worked examples on this GPU, and the metric+span naming map
 - [docs/agent-platform.md](docs/agent-platform.md) — MCP vs A2A, fan-out/join, skills, verification (L1–L4), HITL risk tiers
@@ -68,7 +69,7 @@ LLMOPS_APP__LOG_FORMAT=console uv run poe dev
 ## Tasks
 
 | Task | What |
-|---|---|
+| --- | --- |
 | `poe lint` / `poe fmt` | ruff check + format |
 | `poe typecheck` | mypy strict over `packages/` and `apps/` |
 | `poe test-unit` / `poe test-integration` / `poe cov` | pytest |
@@ -78,7 +79,7 @@ LLMOPS_APP__LOG_FORMAT=console uv run poe dev
 
 ## Layout
 
-```
+```text
 packages/llmops-core/   shared: config (pydantic-settings), structlog JSON logging,
                         request-id ASGI middleware, health registry, error envelope
 apps/llm-application/   stateless app service (Layer 5): /health now, /chat /rag /agent later
@@ -97,7 +98,7 @@ RAM is the first bottleneck on the lab machine (15 GB). Never start every
 profile at once. Budget per profile in [docs/environment.md §6](docs/environment.md).
 
 | Profile | Services | Since |
-|---|---|---|
+| --- | --- | --- |
 | `core` | api, postgres, redis, qdrant | Phase 1 |
 | `classical` | classical-ml (`/predict`, sklearn) | Phase 3 |
 | `inference` | vllm (GPU) | Phase 6 |

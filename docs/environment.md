@@ -13,7 +13,7 @@ the resource budget defined here.
 ## 1. Summary
 
 | Area | Result | Verdict |
-|---|---|---|
+| --- | --- | --- |
 | OS | Windows 11 Pro 10.0.26200, x64 | OK |
 | CPU | AMD Ryzen 9 7845HX, 12 cores / 24 threads, 3.0 GHz base | Strong |
 | RAM | **15.2 GB total**, 1.9 GB free at audit time | **PRIMARY CONSTRAINT** |
@@ -66,7 +66,7 @@ the resource budget defined here.
 - `docker system df`:
 
   | Type | Total | Size | Reclaimable |
-  |---|---|---|---|
+| --- | --- | --- | --- |
   | Images | 17 | 31.2 GB | 27.4 GB |
   | Containers | 13 | 209 MB | 209 MB |
   | Volumes | 7 | 84 MB | 0 |
@@ -83,7 +83,7 @@ the resource budget defined here.
 - Also present: AMD Radeon 610M (iGPU) — ignored.
 - Verified from inside a container:
 
-  ```
+  ```text
   $ docker run --rm --gpus all python:3.11-slim nvidia-smi --query-gpu=name,memory.total --format=csv
   NVIDIA GeForce RTX 4070 Laptop GPU, 8188 MiB
   ```
@@ -94,7 +94,7 @@ the resource budget defined here.
 #### VRAM budget (8 GB) — what fits
 
 | Model | Precision | Weights | KV cache headroom | Fit? |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Qwen2.5-0.5B / 1.5B | FP16 | 1–3 GB | 4–6 GB | Yes, comfortable |
 | Qwen2.5-3B / Llama-3.2-3B | FP16 | ~6 GB | ~1 GB | Marginal — short context only |
 | Qwen2.5-7B / Llama-3.1-8B | INT4 (AWQ/GPTQ) | ~4.5 GB | ~2.5 GB | Yes, limited concurrency |
@@ -162,7 +162,7 @@ real hardware instead of simulation.
 Checked host listeners for the ports this lab will use.
 
 | Port | Intended use | Status |
-|---|---|---|
+| --- | --- | --- |
 | 8000 | API (FastAPI) | **IN USE** by `claim-approval-api` |
 | 8080 | API Gateway / alternate API | free |
 | 8001 | API replica / model gateway | free |
@@ -190,7 +190,7 @@ your other project.
 Only names are recorded; values were never printed.
 
 | Variable | Present | Note |
-|---|---|---|
+| --- | --- | --- |
 | `CUDA_PATH`, `CUDA_PATH_V12_8` | yes | host CUDA 12.8 |
 | `OPENAI_API_KEY` | no | needed for MODE A (external API) |
 | `ANTHROPIC_API_KEY` | no | alternative for MODE A |
@@ -207,7 +207,7 @@ require you to supply one (see section 7).
 Three modes were evaluated:
 
 | Mode | Feasible? | Reason |
-|---|---|---|
+| --- | --- | --- |
 | LOCAL CPU MODE | Yes | 24 threads; small models via llama.cpp/Ollama or mock |
 | LOCAL GPU MODE | Yes, constrained | 8 GB VRAM, GPU passthrough verified; ≤7B INT4 |
 | HYBRID MODE | **Yes — SELECTED** | GPU for inference lessons, external API optional, CPU/mock fallback |
@@ -231,7 +231,7 @@ Three modes were evaluated:
 Never run all profiles together. Approximate RAM in the Docker VM:
 
 | Profile | Services | RAM est. |
-|---|---|---|
+| --- | --- | --- |
 | `core` | api ×1, postgres, redis, qdrant | ~1.5 GB |
 | `inference` | vllm (7B AWQ) | ~3–4 GB RAM + ~7 GB VRAM |
 | `observability` | prometheus, grafana, jaeger/otel-collector | ~1 GB |
@@ -300,7 +300,7 @@ needed by later phases; listed now so you can plan.
 
 Commands used (all read-only except starting Docker Desktop):
 
-```
+```text
 Get-CimInstance Win32_OperatingSystem / Win32_Processor / Win32_ComputerSystem / Win32_LogicalDisk / Win32_VideoController
 nvidia-smi --query-gpu=name,driver_version,memory.total,memory.used,compute_cap --format=csv
 nvcc --version

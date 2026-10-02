@@ -13,7 +13,7 @@ capacity on an RTX 4070 Laptop (8 GB) / 15 GB RAM machine.
 ## 0. Notation
 
 | Symbol | Meaning | Unit |
-|---|---|---|
+| --- | --- | --- |
 | `P` | prompt (input) tokens | tokens |
 | `O` | output (generated) tokens | tokens |
 | `N` | model parameters | count |
@@ -41,7 +41,7 @@ The only honest definition of "latency" is the sum of named spans. Every
 term below is a span in the trace (Phase 23), so a p95 regression can
 always be attributed.
 
-```
+```text
 T_e2e =  T_edge            Kong: authn, rate-limit, routing
        + T_lb              upstream selection (µs)
        + T_app             request parsing, policy, orchestration
@@ -54,7 +54,7 @@ T_e2e =  T_edge            Kong: authn, rate-limit, routing
 
 Streaming changes *perception*, not the sum:
 
-```
+```text
 TTFT  = T_edge + T_lb + T_app + T_retrieval + T_queue + T_prefill
 T_e2e = TTFT + T_decode + T_post
 ```
@@ -65,7 +65,7 @@ a GPU problem — that is precisely the diagnostic lesson (Phase 23).
 
 ### Retrieval sub-decomposition
 
-```
+```text
 T_retrieval = T_embed + max(T_vector, T_bm25) + T_fusion + T_rerank + T_ctx
 ```
 (dense and lexical search run concurrently → `max`, not sum).
@@ -73,7 +73,7 @@ T_retrieval = T_embed + max(T_vector, T_bm25) + T_fusion + T_rerank + T_ctx
 Expected on this machine (to verify Phase 8–9):
 
 | Span | Estimate | Note |
-|---|---|---|
+| --- | --- | --- |
 | `T_embed` | 20–80 ms | CPU, small model, cacheable (Phase 15) |
 | `T_vector` | 5–20 ms | Qdrant, ~60k chunks — trivial |
 | `T_bm25` | 5–15 ms | in-process |
@@ -88,7 +88,7 @@ Expected on this machine (to verify Phase 8–9):
 Prefill processes all `P` tokens in one batched forward pass →
 **compute-bound**.
 
-```
+```text
 FLOPs_prefill ≈ 2·N·P                     (dense matmuls: 2 FLOP per param per token)
               + 2·L·P²·(H_kv·d_h)         (attention score+value, quadratic in P)
 
@@ -101,7 +101,7 @@ context more than doubles prefill.
 
 Worked example — Qwen2.5-7B INT4, `P = 3000` (RAG context), `F ≈ 40 TFLOP/s`:
 
-```
+```text
 2 · 7e9 · 3000            = 4.2e13 FLOP
 2 · 28 · 3000² · (4·128)  = 2.6e13 FLOP     (attention term, non-negligible)
 T_prefill ≈ 6.8e13 / 4e13 ≈ 1.7 s          ← model; measure in Phase 5
@@ -121,7 +121,7 @@ Decode generates one token per step for the whole batch. Each step reads
 the model weights and the KV cache → **memory-bandwidth-bound**, not
 compute-bound. This is the single most important asymmetry in LLM serving.
 
-```
+```text
 bytes_per_step ≈ N·b                       (weights, read once per step for the whole batch)
                + Σ_seqs 2·L·H_kv·d_h·b_kv·C_seq    (KV read, per sequence)
 
@@ -139,7 +139,7 @@ buffering proxy can inflate ITL while TPOT is unchanged.
 
 Worked example — 7B INT4 (`N·b ≈ 3.5 GB`), single stream, short context:
 
-```
+```text
 t_step ≈ 3.5e9 / 2.56e11  ≈ 13.7 ms   → ~73 tok/s theoretical ceiling
 at 55 % bandwidth efficiency          → ~40 tok/s realistic single stream
 ```
@@ -156,7 +156,7 @@ TPOT degrades slowly — until VRAM runs out.
 
 ## 4. Throughput
 
-```
+```text
 Request throughput     X_req   = B_eff / T_e2e            (Little's Law: L = λ·W)
 Output token throughput X_tok  = B_eff / TPOT             (tokens/s, all streams)
 Goodput                        = successful requests / s   (excludes 429/503/timeouts)
@@ -169,7 +169,7 @@ queue + concurrency cap in Phase 21 is arithmetic, not taste.
 
 Utilization and the latency wall (M/M/1 intuition):
 
-```
+```text
 ρ = λ / μ                (μ = service rate)
 W = W_service / (1 - ρ)  → at ρ=0.8, 5× the service time; at ρ=0.95, 20×
 ```
@@ -179,7 +179,7 @@ This is why "GPU at 99 %" and "p95 exploded" are the same observation.
 
 ## 5. VRAM budget — the concurrency ceiling
 
-```
+```text
 VRAM = W_model + KV_total + Activations + Overhead
 
 W_model   = N · b · (1 + q)        q ≈ 0.05–0.15 for quant scales/zeros
@@ -191,18 +191,18 @@ Overhead  ≈ 0.6–1.2 GB                          CUDA context, engine, graphs
 
 Worked example — **Qwen2.5-7B-Instruct-AWQ** (L=28, H_kv=4, d_h=128, KV in FP16):
 
-```
+```text
 KV_token = 2 · 28 · 4 · 128 · 2 B = 57 344 B ≈ 56 KiB / token / sequence
 ```
 
 | Item | Size |
-|---|---|
+| --- | --- |
 | Weights INT4 (+10 % quant overhead) | ≈ 4.0 GB |
 | CUDA/engine overhead | ≈ 0.9 GB |
 | Activations | ≈ 0.3 GB |
 | **Left for KV cache** | **≈ 2.8 GB** |
 
-```
+```text
 max_concurrent_seqs = KV_budget / (KV_token · C)
   at C = 4096:  2.8e9 / (57344 · 4096) ≈ 11.9  → ~11 sequences
   at C = 8192:  ≈ 5.9                          → ~5 sequences
@@ -225,7 +225,7 @@ one instead of ~60 % of it.
 
 ## 6. Token accounting
 
-```
+```text
 # Measured, Phase 4: financial text runs 2.34 chars/token against 5.70 for prose,
 # so a 400-token chunk of financial text holds ~940 characters where prose holds
 # ~2280. Token budgets derived from character counts are wrong by ~2.4x here.
@@ -240,7 +240,7 @@ tokens_request = P + O
 
 Agentic amplification — the number that surprises people:
 
-```
+```text
 tokens_agent = Σ_{iterations} (P_i + O_i)
 P_i grows with accumulated observations (tool outputs are re-sent each step)
 
@@ -256,7 +256,7 @@ retry triples GPU load, not just request count.
 
 Cache effect on effective latency and tokens:
 
-```
+```text
 T_eff = h · T_cache + (1 - h) · T_full        h = hit rate
 tokens_billed_eff = (1 - h) · tokens_request  (exact-match cache)
 ```
@@ -266,7 +266,7 @@ tokens_billed_eff = (1 - h) · tokens_request  (exact-match cache)
 ## 7. Cost model
 
 ### Local GPU
-```
+```text
 $/hour_amortized = hardware_cost / (lifetime_hours · utilization) + power_kWh · $/kWh
 $/request        = GPU_seconds_request · $/hour_amortized / 3600
 GPU_seconds_request ≈ T_prefill + O · TPOT     (GPU-exclusive share of the request)
@@ -276,13 +276,13 @@ Reported honestly as GPU-seconds plus the amortization assumption, because
 "free because it is my laptop" is not a cost model.
 
 ### External API
-```
+```text
 $/request   = (P/1000)·price_in_per_1k + (O/1000)·price_out_per_1k
 $/1M_tokens = published price
 ```
 
 ### Break-even
-```
+```text
 local_fixed_per_hour = $/hour_amortized
 external_variable    = X_req · 3600 · $/request_external
 
@@ -295,7 +295,7 @@ model-gateway fallback policy (Phase 15).
 
 ### Cost drivers (elasticity)
 | Change | Effect on cost |
-|---|---|
+| --- | --- |
 | context +2× | prefill FLOPs > 2× (P² term); KV memory 2× → concurrency ÷2 → $/req up |
 | output +2× | decode time 2× → $/req ≈ 2× (dominant term) |
 | concurrency +2× | throughput up, $/req down — **until KV budget is hit** |
@@ -306,7 +306,7 @@ model-gateway fallback policy (Phase 15).
 
 ## 8. Resource metrics beyond the GPU
 
-```
+```text
 CPU:   utilization per service; reranker and embedding are CPU-bound here
 RAM:   RSS per container vs Compose limit; Docker VM ceiling ≈ 11.7 GiB
 VRAM:  used / total, KV-cache utilization %, preemption / swap count
@@ -330,7 +330,7 @@ endpoint, so it silently swamps any latency conclusion drawn from
 `localhost:<port>`.
 
 | Measured from | classical `/predict` p50 |
-|---|---|
+| --- | --- |
 | Windows host | 43.99 ms |
 | Compose network | 1.26 ms |
 | Inside the handler | 0.26 ms |
@@ -348,7 +348,7 @@ Every formula term above is one span or one metric. Naming is fixed now so
 dashboards and traces line up later.
 
 ### Spans (OTel, Phase 23)
-```
+```text
 http.server.request
  ├─ app.policy
  ├─ rag.retrieve
@@ -372,7 +372,7 @@ one, and a custom namespace where they do not. The split is fixed by
 contract, not this summary.
 
 | Concept | Name | Type | Source |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Model requested | `gen_ai.request.model` | attribute | semconv |
 | Finish reason | `gen_ai.response.finish_reason` | attribute | semconv |
 | Prompt / completion tokens | `gen_ai.usage.input_tokens` / `.output_tokens` | attribute | semconv |
@@ -416,7 +416,7 @@ Putting §2–§5 together, the predicted operating envelope (7B INT4, 3k
 context, 300 output tokens) — **to be confirmed or refuted in Phase 30–31:**
 
 | Quantity | Model prediction |
-|---|---|
+| --- | --- |
 | KV per token per sequence | 56 KiB |
 | Max concurrent sequences @ 4k ctx | ~11 |
 | Single-stream decode | ~30–40 tok/s |

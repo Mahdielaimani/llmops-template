@@ -7,7 +7,7 @@ its one large confound are stated in §1.
 Two services, same machine, same moment:
 
 | | `classical-ml` :8090 | `llm-application` :8080 |
-|---|---|---|
+| --- | --- | --- |
 | Task | will this invoice be paid late? | free-text chat |
 | Model | LogisticRegression + StandardScaler | mock provider (Phase 6 swaps in vLLM) |
 | Artifact | **997 bytes** | 4–15 GB of weights |
@@ -22,7 +22,7 @@ workloads that differ by orders of magnitude is a measurement artefact, not a
 result.
 
 | Measured from | classical `/predict` p50 | llm `/chat` p50 |
-|---|---|---|
+| --- | --- | --- |
 | Windows host (`localhost:8090`) | 43.99 ms | 43.99 ms |
 | Inside the Compose network (`classical-ml:8090`) | **1.26 ms** | **1.03 ms** |
 | Inside the handler (`latency_ms` in the response) | **0.26 ms** | 0.01 ms |
@@ -48,7 +48,7 @@ All figures from inside the Compose network, 200 sequential requests after a
 warm-up call, mock LLM provider.
 
 | | p50 | p95 | server-side p50 | response bytes |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `/predict` (1 invoice) | 1.261 ms | 1.877 ms | 0.262 ms | 182 |
 | `/predict/batch` (100 invoices) | 2.219 ms | 3.036 ms | 0.442 ms | 18 548 |
 | `/chat` (mock, 32 max tokens) | 1.029 ms | 1.580 ms | 0.010 ms | 289 |
@@ -73,7 +73,7 @@ round-trip is FastAPI + network, so anything above that in Phase 6 is the model.
 
 ## 3. Startup and artifact size
 
-```
+```text
 {"event":"startup","model_version":"1.0.0","artifact_bytes":997,"model_load_ms":1115.83}
 ```
 
@@ -97,7 +97,7 @@ sufficient.
 ## 4. The operational differences that actually matter
 
 | | Classical ML | LLM |
-|---|---|---|
+| --- | --- | --- |
 | **Input** | fixed 6-field schema, typed | free text, no schema |
 | **Bad input** | `422 validation_error` | answered anyway, plausibly |
 | **Output** | one float | variable-length token sequence |
@@ -124,7 +124,7 @@ rather than a fixture (Phase 14), and judged (Phase 12) rather than asserted.
 
 ### Schema, demonstrated
 
-```
+```text
 $ curl -X POST :8090/predict -d '{"amount_eur":"twenty thousand", ...}'
 {"error":{"code":"validation_error", ...
           "msg":"Input should be a valid number, unable to parse string as a number"}}
@@ -142,7 +142,7 @@ output guardrails and evaluation (expensive) — Phases 28 and 11.
 From `models/invoice-late-payment/model-1.0.0.json`:
 
 | Metric | Value |
-|---|---|
+| --- | --- |
 | ROC AUC | 0.7538 |
 | Accuracy | 0.7652 |
 | **Majority-class baseline accuracy** | **0.7263** |

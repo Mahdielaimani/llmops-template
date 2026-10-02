@@ -21,7 +21,7 @@ rewriting dashboards, alert rules and recorded queries built on the old names.
 custom namespace and say so.**
 
 | Concept | Name used | Source |
-|---|---|---|
+| --- | --- | --- |
 | Model requested | `gen_ai.request.model` | semconv |
 | Finish reason | `gen_ai.response.finish_reason` | semconv |
 | Prompt tokens | `gen_ai.usage.input_tokens` | semconv |
@@ -52,7 +52,7 @@ Three consequences worth stating:
 
 ## Alternatives considered
 | Option | Why not |
-|---|---|
+| --- | --- |
 | Keep the invented `llmops_*` vocabulary everywhere | no vendor dashboard understands it; every future integration needs a mapping layer; the naming would have to be defended in interviews rather than cited |
 | Adopt semconv wholesale, including agents | agent and tool conventions are explicitly still settling; building Phase 27 on them risks a second rename |
 | Wait for semconv to cover TTFT before deciding | blocks Phase 2 on an external roadmap; TTFT is needed now and may never be standardised |

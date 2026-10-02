@@ -12,7 +12,7 @@ trusted, and how a human interrupts a risky action.
 ## 1. Two protocols, two jobs
 
 | | **MCP** (Phase 26) | **A2A** (Phase 26b) |
-|---|---|---|
+| --- | --- | --- |
 | Connects | agent → tool / resource | agent → **agent** |
 | Other side is | a passive function | an autonomous peer with its own model, context, tools |
 | Unit of work | tool call (request/response) | **task** with a lifecycle |
@@ -30,7 +30,7 @@ and output sanitization stay in our application (§5, and `CLAUDE.md` §62).
 
 ### A2A task lifecycle
 
-```
+```text
 submitted → working → ┬→ completed
                       ├→ input-required   ← human approval gate lives here (§6)
                       ├→ failed
@@ -68,7 +68,7 @@ so what is advertised is what is deployed.
 
 Three patterns, chosen per task by the supervisor:
 
-```
+```text
 SEQUENTIAL      supervisor → A → B → C → answer
                 simple, debuggable; latency = Σ, tokens = Σ
 
@@ -85,7 +85,7 @@ PIPELINE        research → analysis → writer      (output_i = input_{i+1})
 decisions — defaults that silently differ are how multi-agent systems hang:
 
 | Decision | Options | Our default |
-|---|---|---|
+| --- | --- | --- |
 | Completion policy | `all` / `first_success` / `quorum(k)` / `best_effort` | `all` with deadline |
 | Per-branch deadline | absolute vs shared budget | shared wall-clock budget, per-branch cap |
 | Partial failure | fail whole task / degrade with note / retry branch | **degrade + state which branch failed in the answer** |
@@ -192,13 +192,18 @@ as a first-class metric, and forcing an answer is treated as a regression.
 ## 5. Where security is enforced (six points, none of them the model)
 
 | # | Point | Enforces | Phase |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | 1 | Kong (edge) | authn, RBAC group, rate limit, body size | 16 |
 | 2 | Retrieval filter | ACL — the model never sees a disallowed chunk | 11 |
 | 3 | Tool broker | allowlist, per-user authz, param schema, resource caps | 24 |
 | 4 | Peer (A2A) authz | which agent may call which, with which scopes; remote output treated as untrusted data | 26b |
 | 5 | Output guardrails | schema, citation validity, PII/secret scan, unsupported claims | 28 |
+| 5b | Cache scoping | `acl_scope_hash` in the cache key — otherwise a lower-clearance user hits a higher-clearance answer (ADR-019) | 15 |
 | 6 | Budget governor | iterations, depth, wall-clock, tokens, cost | 24, 27 |
+
+Guardrails at point 3 run on **every** entry into the context, not once on the
+user's prompt: a tool observation on iteration three is lower-trust than the
+authenticated user. Full treatment in [security.md](security.md) §2.
 
 The model may *request*; the application *decides*. A prompt instruction
 ("do not reveal confidential data") is a hint, never a control.
@@ -210,7 +215,7 @@ The model may *request*; the application *decides*. A prompt instruction
 ### Risk tiers — classified per action, not per agent
 
 | Tier | Examples | Policy |
-|---|---|---|
+| --- | --- | --- |
 | `read` | vector/keyword search, read public doc | auto |
 | `compute` | calculator, SQL `SELECT`, table extract | auto, sandboxed, timeout, row cap |
 | `sensitive-read` | confidential-class document | auto **if** ACL passes, always audited |
@@ -219,7 +224,7 @@ The model may *request*; the application *decides*. A prompt instruction
 
 ### Mechanics — a durable pause, not a blocked thread
 
-```
+```text
 agent decides action
    → tool broker classifies risk tier
    → tier ≥ write?
@@ -249,7 +254,7 @@ Requirements that follow from "durable":
 ## 7. Failure modes introduced by agents (and their detection)
 
 | Failure | Detection | Mitigation |
-|---|---|---|
+| --- | --- | --- |
 | Infinite loop / oscillation | `llmops_agent_iterations` histogram, repeated identical tool args | max_iterations, loop detector on action hash |
 | Cost explosion via fan-out | `llmops_cost_usd_total` per task, budget governor | shared budget debited atomically, branch cap |
 | Deadlock in join | task age, `input-required` with no approver | deadline on every branch, auto-deny timeout |

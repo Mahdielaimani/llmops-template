@@ -24,7 +24,7 @@ Two endpoints from `llmops_core.health`, per service:
 
 ## Alternatives considered
 | Option | Why not |
-|---|---|
+| --- | --- |
 | single `/health` doing everything | a DB blip restarts pods (liveness) instead of draining them (readiness) |
 | readiness that checks *downstream* LLM availability for the API tier | would remove all API replicas when the GPU is saturated — the queue/backpressure layer (Phase 21) must handle that, not the probe |
 | TCP-only probes | cannot distinguish "listening" from "model loaded" |

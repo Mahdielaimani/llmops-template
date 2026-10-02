@@ -12,7 +12,7 @@ What we chose, in one paragraph.
 
 ## Alternatives considered
 | Option | Why not |
-|---|---|
+| --- | --- |
 
 ## Trade-offs
 What we gain / what we lose.
