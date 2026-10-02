@@ -17,7 +17,8 @@ Guiding rule: **measure → find the bottleneck → optimize → scale the bottl
 | 0 Environment audit + architecture | done — [docs/environment.md](docs/environment.md), [docs/architecture.md](docs/architecture.md), [docs/roadmap.md](docs/roadmap.md) |
 | 1 Repository + engineering foundation | done — this README, `llmops-core`, `llm-application`, Compose `core` profile |
 | 2 Basic LLM application (`/chat`) | done — provider abstraction, SSE streaming, TTFT/TPOT/ITL |
-| 3 Classical ML serving comparison | next |
+| 3 Classical ML serving comparison | done — [docs/classical-ml-vs-llm-serving.md](docs/classical-ml-vs-llm-serving.md) |
+| 4 Transformer inference concepts | next |
 
 Full plan: [docs/roadmap.md](docs/roadmap.md). Decisions: [docs/adr/](docs/adr/).
 
@@ -96,6 +97,7 @@ profile at once. Budget per profile in [docs/environment.md §6](docs/environmen
 | Profile | Services | Since |
 |---|---|---|
 | `core` | api, postgres, redis, qdrant | Phase 1 |
+| `classical` | classical-ml (`/predict`, sklearn) | Phase 3 |
 | `inference` | vllm (GPU) | Phase 6 |
 | `eval` | mlflow | Phase 13 |
 | `edge` | kong | Phase 16 |

@@ -21,7 +21,7 @@ vLLM only in Docker, no `make`, internet currently offline.
 | 0 | Environment audit + architecture | ☑ | `docs/environment.md`, `docs/architecture.md`, `docs/roadmap.md` | **your confirmation** |
 | 1 | Repository + engineering foundation | ☑ | uv workspace, py3.12 pin, config system (pydantic-settings), JSON logging, pytest, task runner, Dockerfile base, `.env.example`, `docs/business-requirements.md` (SLOs, constraints), ADR-001 | tests green, `docker compose --profile core up` healthy |
 | 2 | Basic LLM application | ☑ | `POST /chat` with `LLMProvider` abstraction: `mock` + `openai`-compatible client; request_id, timeouts, error model, SSE streaming; response has latency/tokens | curl demo with mock; external key optional |
-| 3 | Classical ML serving comparison | ☐ | sklearn model → artifact → FastAPI `/predict`; `docs/classical-ml-vs-llm-serving.md` | side-by-side latency/throughput numbers |
+| 3 | Classical ML serving comparison | ☑ | sklearn model → artifact → FastAPI `/predict`; `docs/classical-ml-vs-llm-serving.md` | side-by-side latency/throughput numbers |
 
 ## Block B — Inference internals (GPU)
 
@@ -78,7 +78,7 @@ vLLM only in Docker, no `make`, internet currently offline.
 
 | # | Phase | Status | Key deliverables | Gate to next |
 |---|---|---|---|---|
-| 30 | Load testing | ☐ | Locust scenarios 1→100 users (500 if RAM allows), graphs, bottleneck report | bottleneck named with evidence |
+| 30 | Load testing | ☐ | Locust **as a container on the Compose network** (Phase 3 found ~43 ms of host-side port-proxy overhead), scenarios 1→100 users (500 if RAM allows), graphs, bottleneck report | bottleneck named with evidence |
 | 31 | Scaling experiments | ☐ | stage 1–4; API replicas vs inference knobs; `docs/scaling.md` | "scale the bottleneck" proven with numbers |
 | 32 | Kubernetes | ☐ | minikube (GPU), manifests: ns/deploy/svc/cm/secret, Kong Ingress Controller (Gateway API), probes incl. startup for vLLM; `docs/kubernetes.md`; ADR-010 | stack runs on minikube |
 | 33 | Autoscaling | ☐ | HPA on CPU + custom metric (queue depth / concurrency); GPU capacity not autoscaled — ⊘ documented | HPA scales API pods, p95 unchanged |
@@ -116,6 +116,7 @@ vLLM only in Docker, no `make`, internet currently offline.
 ## Change log
 
 - 2026-09-14 — Phase 0 complete: audit, mode decision (HYBRID), roadmap created.
+- 2026-10-01 — Phase 3 complete: `classical-ml` service (/predict, /predict/batch, /model), versioned 997-byte artifact with its own metrics and sha256, `benchmarks/compare_serving.py`, `docs/classical-ml-vs-llm-serving.md` written from measured numbers. **Measurement finding:** ~43 ms of every host-side request is Docker Desktop's WSL2 port proxy, identical across endpoints — benchmarks now run inside the Compose network and every handler reports its own `latency_ms`. Phase 30 load tests must follow the same rule. 48 unit tests.
 - 2026-09-26 — Phase 2 complete: `POST /chat` with provider abstraction (mock / OpenAI-compatible for vLLM+Ollama+OpenAI), SSE streaming, TTFT/TPOT/ITL measurement, upstream-status mapping, no retries by design. Telemetry adopts OTel GenAI semconv from the first line of instrumentation (ADR-017); provider interface recorded in ADR-018. 33 unit tests. SLO-2/SLO-3 conflict flagged in business-requirements.md pending Phase 30.
 - 2026-09-24 — Scope additions after review: A2A (26b), skills registry (27a), fan-out/join (27b), verification (28a), HITL risk tiers (28b); release manifest folded into 35. New docs: `metrics-and-capacity.md` (latency/TTFT/ITL/TPOT/throughput/VRAM/cost formulas + instrumentation map), `agent-platform.md`, `versioning.md`. ADR-014/015/016.
 - 2026-09-17 — Phase 1 complete: uv workspace, llmops-core, llm-application, Compose core profile, 20 unit + 5 integration tests, ADR-001/011/012/013, business requirements + SLOs.

@@ -7,6 +7,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "llmops-core",
     "llm-application",
+    "classical-ml",
 ]
 
 [dependency-groups]
@@ -36,6 +37,7 @@ members = [
 [tool.uv.sources]
 llmops-core = { workspace = true }
 llm-application = { workspace = true }
+classical-ml = { workspace = true }
 
 # ---------------------------------------------------------------------------
 # Task runner (replaces Makefile on Windows; Makefile delegates here).
@@ -86,7 +88,10 @@ ignore = ["S101"]  # assert allowed in tests
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "T20"]
+# CLI entrypoints: printing results is the interface, not a debug leftover.
 "scripts/**" = ["T20"]
+"benchmarks/**" = ["T20"]
+"**/train.py" = ["T20"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -96,6 +101,12 @@ plugins = ["pydantic.mypy"]
 mypy_path = "packages/llmops-core/src:apps/llm-application/src"
 namespace_packages = true
 explicit_package_bases = true
+
+# sklearn, scipy and joblib ship no py.typed marker. Scoped to those modules so the
+# rest of the codebase keeps strict checking.
+[[tool.mypy.overrides]]
+module = ["sklearn.*", "scipy.*", "joblib.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -1,5 +1,6 @@
 # Compose profiles keep RAM under control on a 15 GB laptop (see docs/environment.md §6).
 #   core          : api + postgres + redis + qdrant             (~1.5 GB)
+#   classical     : classical-ml (sklearn /predict, Phase 3)    (~0.3 GB)
 #   inference     : vllm (GPU)                                   (Phase 6)
 #   observability : prometheus + grafana + otel-collector + jaeger (Phase 22)
 #   edge          : kong                                         (Phase 16)
@@ -41,6 +42,27 @@ services:
     deploy:
       resources:
         limits: { memory: 512M }
+    restart: unless-stopped
+
+  classical-ml:
+    profiles: [classical]
+    build:
+      context: .
+      dockerfile: apps/classical-ml/Dockerfile
+    image: llmops/classical-ml:${IMAGE_TAG:-dev}
+    environment:
+      LLMOPS_APP__LOG_FORMAT: json
+      LLMOPS_APP__LOG_LEVEL: ${LLMOPS_APP__LOG_LEVEL:-INFO}
+      LLMOPS_MODEL_DIR: /build/models/invoice-late-payment
+    ports:
+      - "8090:8090"
+    # The model artifact is mounted, not baked in: a model is a versioned artifact
+    # with its own lifecycle (ADR-015), and Phase 6 mounts vLLM weights the same way.
+    volumes:
+      - ./models:/build/models:ro
+    deploy:
+      resources:
+        limits: { memory: 384M }
     restart: unless-stopped
 
   postgres:

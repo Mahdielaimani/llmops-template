@@ -318,6 +318,26 @@ predictive of latency collapse than GPU-util %, because a GPU can read
 
 ---
 
+## 8b. Measuring on this machine — the port-proxy confound
+
+Measured in Phase 3: **~43 ms of every request issued from the Windows host is
+Docker Desktop's WSL2 port proxy.** It is constant and identical for every
+endpoint, so it silently swamps any latency conclusion drawn from
+`localhost:<port>`.
+
+| Measured from | classical `/predict` p50 |
+|---|---|
+| Windows host | 43.99 ms |
+| Compose network | 1.26 ms |
+| Inside the handler | 0.26 ms |
+
+Rules that follow, applied from here on:
+- benchmarks and load generators run **as containers on the Compose network**
+- every handler reports its own `latency_ms` / `total_ms`, so transport is separable
+- a p95 regression is attributed from spans (§9), never from a host-side curl
+
+Detail: [classical-ml-vs-llm-serving.md](classical-ml-vs-llm-serving.md) §1.
+
 ## 9. Instrumentation map
 
 Every formula term above is one span or one metric. Naming is fixed now so

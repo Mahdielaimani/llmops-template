@@ -84,3 +84,47 @@ def test_chat_streams_over_the_wire(http: httpx.Client) -> None:
         events = [line for line in r.iter_lines() if line.startswith("event:")]
     assert events[-1] == "event: done"
     assert events.count("event: delta") > 1
+
+
+CLASSICAL_BASE = os.getenv("LLMOPS_TEST_CLASSICAL_URL", "http://localhost:8090")
+_INVOICE = {
+    "amount_eur": 24500.0,
+    "days_to_due": 30,
+    "customer_prior_invoices": 12,
+    "customer_prior_late_ratio": 0.25,
+    "has_purchase_order": True,
+    "is_new_customer": False,
+}
+
+
+@pytest.fixture(scope="module")
+def ml(http: httpx.Client) -> httpx.Client:
+    with httpx.Client(base_url=CLASSICAL_BASE, timeout=5.0) as c:
+        try:
+            c.get("/health/live")
+        except httpx.ConnectError:
+            pytest.skip(f"classical-ml not running at {CLASSICAL_BASE}")
+        yield c
+
+
+def test_classical_predict(ml: httpx.Client) -> None:
+    r = ml.post("/predict", json=_INVOICE, headers={"x-request-id": "it-ml"})
+    assert r.status_code == 200
+    b = r.json()
+    assert b["request_id"] == "it-ml"
+    assert 0.0 <= b["probability"] <= 1.0
+    assert b["model_version"] == "1.0.0"
+
+
+def test_classical_reports_its_own_latency(ml: httpx.Client) -> None:
+    """Phase 3: host round-trip includes ~43ms of Docker Desktop port proxy, so the
+    handler's own measurement is the only usable latency signal from the host."""
+    b = ml.post("/predict", json=_INVOICE).json()
+    assert b["latency_ms"] < 20  # in-handler; the round-trip would be ~44ms
+
+
+def test_classical_artifact_provenance(ml: httpx.Client) -> None:
+    card = ml.get("/model").json()
+    assert len(card["artifact_sha256"]) == 64
+    assert card["metrics"]["roc_auc"] > card["metrics"].get("baseline_accuracy", 0) - 1
+    assert card["metrics"]["accuracy"] > card["metrics"]["baseline_accuracy"]
