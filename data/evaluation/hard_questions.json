@@ -1,0 +1,86 @@
+[
+  {
+    "question": "AUD-2026-014",
+    "expect_doc_id": "AUD-2026-014",
+    "expect_version": 1,
+    "hardness": "lexical",
+    "rationale": "bare document code, no natural language; dense has nothing to embed"
+  },
+  {
+    "question": "What does POL-EXPENSE-001 require?",
+    "expect_doc_id": "POL-EXPENSE-001",
+    "expect_version": 3,
+    "hardness": "lexical",
+    "rationale": "identifier plus generic verb; the code carries all the signal"
+  },
+  {
+    "question": "BUD-FINANCE-FY2026 travel cap",
+    "expect_doc_id": "BUD-FINANCE-FY2026",
+    "expect_version": 1,
+    "hardness": "lexical",
+    "rationale": "identifier disambiguates two otherwise identical budget memos"
+  },
+  {
+    "question": "How long do staff have to claim money back after spending it?",
+    "expect_doc_id": "POL-EXPENSE-001",
+    "expect_version": 3,
+    "hardness": "paraphrase",
+    "rationale": "no term overlap with 'Expense Reimbursement Policy' or '60 days'"
+  },
+  {
+    "question": "Are customers taking too long to settle their bills?",
+    "expect_doc_id": "QR-EMEA-SALES-Q1FY2026",
+    "expect_version": 1,
+    "hardness": "paraphrase",
+    "rationale": "asks about DSO and ageing without using either term"
+  },
+  {
+    "question": "Did anyone book income in the wrong months?",
+    "expect_doc_id": "AUD-2026-014",
+    "expect_version": 1,
+    "hardness": "paraphrase",
+    "rationale": "'revenue recognised in the incorrect period' with every term replaced"
+  },
+  {
+    "question": "What is the discretionary budget for the EMEA sales team?",
+    "expect_doc_id": "BUD-EMEA-SALES-FY2026",
+    "expect_version": 1,
+    "hardness": "near-duplicate",
+    "rationale": "BUD-FINANCE-FY2026 is near-identical except for department"
+  },
+  {
+    "question": "What is the finance department's discretionary budget?",
+    "expect_doc_id": "BUD-FINANCE-FY2026",
+    "expect_version": 1,
+    "hardness": "near-duplicate",
+    "rationale": "mirror of the previous question; both must resolve correctly"
+  },
+  {
+    "question": "What was originally reported for Q2 FY2026 EMEA revenue, before any restatement?",
+    "expect_doc_id": "QR-EMEA-SALES-Q2FY2026",
+    "expect_version": 1,
+    "hardness": "version",
+    "rationale": "v2 supersedes v1 and scores higher on most terms; v1 is correct here"
+  },
+  {
+    "question": "What is the corrected Q2 FY2026 EMEA revenue figure after review?",
+    "expect_doc_id": "QR-EMEA-SALES-Q2FY2026",
+    "expect_version": 2,
+    "hardness": "version",
+    "rationale": "the mirror case; 'corrected' and 'after review' must select v2"
+  },
+  {
+    "question": "APAC sales gross margin in the third quarter",
+    "expect_doc_id": "QR-APAC-SALES-Q3FY2026",
+    "expect_version": 1,
+    "hardness": "distractor",
+    "rationale": "five sibling reports share almost all vocabulary"
+  },
+  {
+    "question": "How many accounts hold the overdue balance for EMEA in Q3?",
+    "expect_doc_id": "QR-EMEA-SALES-Q3FY2026",
+    "expect_version": 1,
+    "hardness": "distractor",
+    "rationale": "the answer is on page 2, which the title does not describe"
+  }
+]

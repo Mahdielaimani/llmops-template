@@ -33,12 +33,17 @@ kv = _load("07_kv_cache")
 
 from _shared import N_HEADS, rng  # noqa: E402
 
-PROMPT_IDS = [464, 1664, 2098, 1913, 3349, 287, 262, 1218, 3860, 13]
+PROMPT_IDS = [464, 1664, 198, 1913, 1349, 287, 262, 1218, 1860, 13]  # all < TEST_VOCAB
+
+
+# Small vocabulary: the real table is 294 MiB of float64 and these tests assert
+# shapes and byte formulas, neither of which depends on vocabulary size.
+TEST_VOCAB = 2048
 
 
 @pytest.fixture(scope="module")
 def weights():
-    return pd.build(rng())
+    return pd.build(rng(), vocab=TEST_VOCAB)
 
 
 def test_kv_cache_is_exact_not_an_approximation(weights) -> None:

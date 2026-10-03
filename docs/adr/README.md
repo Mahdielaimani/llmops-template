@@ -7,8 +7,8 @@ Numbering 001–010 follows the master prompt's list; 011+ are additional.
 | --- | --- | --- | --- |
 | [001](ADR-001-fastapi.md) | FastAPI for application services | Accepted | 1 |
 | 002 | Qdrant as vector database | Planned | 8 |
-| 003 | Hybrid retrieval | Planned | 9 |
-| 004 | Reranking | Planned | 9 |
+| [003](ADR-003-hybrid-retrieval.md) | Hybrid retrieval, weighted fusion over RRF | Accepted | 9 |
+| [004](ADR-004-reranking.md) | Cross-encoder reranking, available but off by default | Accepted | 9 |
 | 005 | Redis for cache / queue / rate-limit state | Planned | 15 |
 | 006 | vLLM as inference engine | Planned | 6 |
 | 007 | Kong OSS as API Gateway | Planned (pre-decided in architecture.md AD-0.9) | 16 |

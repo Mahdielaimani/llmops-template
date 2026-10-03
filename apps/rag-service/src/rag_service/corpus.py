@@ -305,14 +305,156 @@ def write() -> tuple[Path, int, int]:
     return OUT, len(docs), len(facts)
 
 
+@dataclass
+class HardQuestion:
+    """A question chosen to expose where one retrieval strategy fails.
+
+    Phase 8 measured Recall@3 = 1.000 with dense retrieval alone on the planted
+    facts, which leaves no headroom to demonstrate that hybrid or reranking help.
+    These are deliberately harder, and each is labelled with *why* it is hard, so
+    a configuration comparison shows a mechanism rather than noise.
+    """
+
+    question: str
+    expect_doc_id: str
+    expect_version: int | None  # None = any version acceptable
+    hardness: str  # lexical | paraphrase | near-duplicate | version | distractor
+    rationale: str
+
+
+def hard_questions() -> list[HardQuestion]:
+    docs, _ = build()
+    by_id = {(d.doc_id, d.version): d for d in docs}
+
+    q: list[HardQuestion] = [
+        # Exact identifiers: dense embeddings compress codes into near-identical
+        # vectors, so BM25 should win these outright.
+        HardQuestion(
+            question="AUD-2026-014",
+            expect_doc_id="AUD-2026-014",
+            expect_version=1,
+            hardness="lexical",
+            rationale="bare document code, no natural language; dense has nothing to embed",
+        ),
+        HardQuestion(
+            question="What does POL-EXPENSE-001 require?",
+            expect_doc_id="POL-EXPENSE-001",
+            expect_version=3,
+            hardness="lexical",
+            rationale="identifier plus generic verb; the code carries all the signal",
+        ),
+        HardQuestion(
+            question="BUD-FINANCE-FY2026 travel cap",
+            expect_doc_id="BUD-FINANCE-FY2026",
+            expect_version=1,
+            hardness="lexical",
+            rationale="identifier disambiguates two otherwise identical budget memos",
+        ),
+        # Paraphrase with no shared vocabulary: BM25 scores ~0, dense should win.
+        HardQuestion(
+            question="How long do staff have to claim money back after spending it?",
+            expect_doc_id="POL-EXPENSE-001",
+            expect_version=3,
+            hardness="paraphrase",
+            rationale="no term overlap with 'Expense Reimbursement Policy' or '60 days'",
+        ),
+        HardQuestion(
+            question="Are customers taking too long to settle their bills?",
+            expect_doc_id="QR-EMEA-SALES-Q1FY2026",
+            expect_version=1,
+            hardness="paraphrase",
+            rationale="asks about DSO and ageing without using either term",
+        ),
+        HardQuestion(
+            question="Did anyone book income in the wrong months?",
+            expect_doc_id="AUD-2026-014",
+            expect_version=1,
+            hardness="paraphrase",
+            rationale="'revenue recognised in the incorrect period' with every term replaced",
+        ),
+        # Near-duplicates: two documents of identical shape, different department.
+        HardQuestion(
+            question="What is the discretionary budget for the EMEA sales team?",
+            expect_doc_id="BUD-EMEA-SALES-FY2026",
+            expect_version=1,
+            hardness="near-duplicate",
+            rationale="BUD-FINANCE-FY2026 is near-identical except for department",
+        ),
+        HardQuestion(
+            question="What is the finance department's discretionary budget?",
+            expect_doc_id="BUD-FINANCE-FY2026",
+            expect_version=1,
+            hardness="near-duplicate",
+            rationale="mirror of the previous question; both must resolve correctly",
+        ),
+        # Version disambiguation: same doc_id, two versions, different figures.
+        HardQuestion(
+            question=(
+                "What was originally reported for Q2 FY2026 EMEA revenue, before any restatement?"
+            ),
+            expect_doc_id="QR-EMEA-SALES-Q2FY2026",
+            expect_version=1,
+            hardness="version",
+            rationale="v2 supersedes v1 and scores higher on most terms; v1 is correct here",
+        ),
+        HardQuestion(
+            question="What is the corrected Q2 FY2026 EMEA revenue figure after review?",
+            expect_doc_id="QR-EMEA-SALES-Q2FY2026",
+            expect_version=2,
+            hardness="version",
+            rationale="the mirror case; 'corrected' and 'after review' must select v2",
+        ),
+        # Distractors: three quarters of the same report shape per region.
+        HardQuestion(
+            question="APAC sales gross margin in the third quarter",
+            expect_doc_id="QR-APAC-SALES-Q3FY2026",
+            expect_version=1,
+            hardness="distractor",
+            rationale="five sibling reports share almost all vocabulary",
+        ),
+        HardQuestion(
+            question="How many accounts hold the overdue balance for EMEA in Q3?",
+            expect_doc_id="QR-EMEA-SALES-Q3FY2026",
+            expect_version=1,
+            hardness="distractor",
+            rationale="the answer is on page 2, which the title does not describe",
+        ),
+    ]
+
+    missing = [h for h in q if (h.expect_doc_id, h.expect_version or 1) not in by_id]
+    if missing:
+        raise AssertionError(f"hard questions reference documents not in the corpus: {missing}")
+    return q
+
+
+def write_hard_questions() -> Path:
+    eval_dir = OUT.parents[1] / "evaluation"
+    eval_dir.mkdir(parents=True, exist_ok=True)
+    path = eval_dir / "hard_questions.json"
+    path.write_text(json.dumps([asdict(h) for h in hard_questions()], indent=2), encoding="utf-8")
+    return path
+
+
 if __name__ == "__main__":
     out, n_docs, n_facts = write()
     print(f"wrote {n_docs} documents to {out}")
     print(f"wrote {n_facts} planted facts to {out.parents[1] / 'evaluation'}")
+
     _, facts = build()
     by_class: dict[str, int] = {}
     for f in facts:
         by_class[f.classification] = by_class.get(f.classification, 0) + 1
-    print("\nplanted facts by classification:")
+    print()
+    print("planted facts by classification:")
     for k, v in sorted(by_class.items()):
         print(f"  {k:<14} {v}")
+
+    hard_path = write_hard_questions()
+    hard = hard_questions()
+    print()
+    print(f"wrote {len(hard)} hard questions to {hard_path}")
+    by_hardness: dict[str, int] = {}
+    for h in hard:
+        by_hardness[h.hardness] = by_hardness.get(h.hardness, 0) + 1
+    for k, v in sorted(by_hardness.items()):
+        print(f"  {k:<16} {v}")

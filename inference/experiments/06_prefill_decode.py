@@ -69,9 +69,14 @@ class Weights:
     blocks: list[dict[str, np.ndarray]] = field(default_factory=list)
 
 
-def build(r: np.random.Generator) -> Weights:
+def build(r: np.random.Generator, vocab: int = VOCAB) -> Weights:
+    """`vocab` is overridable so tests can allocate a small table: the full
+    50257 x 768 float64 embedding matrix is 294 MiB, and this laptop has 15 GB
+    shared with Docker (docs/environment.md). The shapes under test do not
+    depend on vocabulary size.
+    """
     w = Weights(
-        wte=r.normal(0, 0.02, size=(VOCAB, D_MODEL)),
+        wte=r.normal(0, 0.02, size=(vocab, D_MODEL)),
         wpe=r.normal(0, 0.01, size=(MAX_POS, D_MODEL)),
     )
     for _ in range(N_LAYERS_TOY):

@@ -18,6 +18,9 @@ from llmops_core.health import HealthRegistry, build_health_router
 from llmops_core.logging import configure_logging, get_logger
 from rag_service.acl import AclPredicate, Classification, RagRequest, User
 from rag_service.embedding import Embedder
+from rag_service.fusion import Reranker
+from rag_service.lexical import LexicalIndex, load_payloads
+from rag_service.pipeline import Mode, RetrievalPipeline
 from rag_service.retriever import Retriever, build_context
 
 log = get_logger("rag_service")
@@ -53,6 +56,11 @@ class RagResponse(BaseModel):
     embed_ms: float = 0.0
     search_ms: float = 0.0
     latency_ms: float = 0.0
+    mode: str = ""
+    dense_candidates: int = 0
+    lexical_candidates: int = 0
+    reranked: int = 0
+    stages: dict[str, float] = {}
 
 
 # Stub identity. Phase 16 replaces this with a verified JWT from Kong; the shape
@@ -108,11 +116,17 @@ async def rag(
     body: RagRequest, request: Request, x_user: str | None = Header(default=None)
 ) -> RagResponse:
     started = time.perf_counter()
-    retriever: Retriever = request.app.state.retriever
+    pipeline: RetrievalPipeline = request.app.state.pipeline
     user = resolve_user(x_user)
     acl = AclPredicate.for_user(user)
 
-    result = retriever.search(body.question, acl, top_k=body.top_k, candidates=body.candidates)
+    result = pipeline.run(
+        body.question,
+        acl,
+        mode=Mode(body.mode),
+        top_k=body.top_k,
+        candidates=body.candidates,
+    )
     context, _ = build_context(result.chunks)
 
     return RagResponse(
@@ -135,11 +149,16 @@ async def rag(
         request_id=get_request_id(),
         acl_scope=result.acl_scope,
         index_version=request.app.state.index_version,
-        candidates_considered=result.candidates_returned,
+        candidates_considered=max(result.dense_candidates, result.lexical_candidates),
         retrieval_ms=result.total_ms,
-        embed_ms=result.embed_ms,
-        search_ms=result.search_ms,
+        embed_ms=result.stages.get("embed_ms", 0.0),
+        search_ms=result.stages.get("dense_ms", 0.0),
         latency_ms=round((time.perf_counter() - started) * 1000, 3),
+        mode=result.mode,
+        dense_candidates=result.dense_candidates,
+        lexical_candidates=result.lexical_candidates,
+        reranked=result.reranked,
+        stages=result.stages,
     )
 
 
@@ -185,8 +204,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         collection = docs[-1]
 
+        payloads = load_payloads(client, collection)
         app.state.client = client
         app.state.retriever = Retriever(client, embedder, collection)
+        app.state.pipeline = RetrievalPipeline(
+            app.state.retriever, LexicalIndex(payloads), Reranker()
+        )
         app.state.index_version = collection.removeprefix("docs_")
         count = client.count(collection_name=collection).count
         app.state.ingest_summary = {
@@ -195,6 +218,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "chunks": count,
             "embed_model": embedder.model_name,
             "embed_dim": embedder.dim,
+            "lexical_chunks": len(payloads),
+            "reranker": app.state.pipeline.reranker.model_name,
+            "modes": [str(m) for m in Mode],
         }
 
         async def qdrant_ready() -> None:
