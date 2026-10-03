@@ -1,0 +1,18 @@
+name: faithfulness
+family: judge
+purpose: Score whether each claim in an answer is supported by the retrieved sources.
+owner: platform-team
+stages:
+  dev: 1.0.0
+versions:
+- version: 1.0.0
+  sha256: 855fa662a5dfb611a281f2b18fef9546c079b2c5e70a9d9f58d487a71a0fda54
+  released_at: '2026-10-03T19:17:34+00:00'
+  model_compatibility:
+  - Qwen2.5-7B-Instruct-AWQ
+  variables:
+  - answer
+  - context
+  - question
+  eval_run: null
+  notes: per-claim verdicts; judges support by sources only, not world truth

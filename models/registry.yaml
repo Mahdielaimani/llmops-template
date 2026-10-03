@@ -1,0 +1,89 @@
+# Model registry — ADR-015 artifact classes 3 and 4.
+#
+# `revision` must be immutable: `latest`, `main` and `head` are rejected at load,
+# because a revision that moves makes every recorded evaluation unreproducible.
+#
+# `vram_estimate_gb` is weights only. The KV cache is context-dependent and its
+# arithmetic lives in docs/kv-cache.md §4. `verify` fails if a model at stage
+# production cannot physically fit the 8 GB card.
+
+models:
+  - name: mock-1
+    kind: generation
+    provider: mock
+    revision: "0.1.0"
+    context_length: 8192
+    stage: production
+    notes: Deterministic provider for tests and CI (MODE C). Default so the platform runs offline.
+
+  - name: Qwen2.5-7B-Instruct-AWQ
+    kind: generation
+    provider: vllm
+    revision: "main-20260901"
+    quantization: int4-awq
+    params_b: 7.6
+    context_length: 32768
+    vram_estimate_gb: 4.18
+    kv_bytes_per_token: 57344
+    stage: dev
+    notes: >-
+      Phase 6 target. 56 KiB/token with GQA gives ~11 concurrent sequences at 4k
+      context on this card (docs/kv-cache.md §4). Blocked pending disk cleanup.
+
+  - name: Qwen2.5-1.5B-Instruct
+    kind: generation
+    provider: vllm
+    revision: "main-20260901"
+    quantization: fp16
+    params_b: 1.54
+    context_length: 32768
+    vram_estimate_gb: 3.39
+    kv_bytes_per_token: 28672
+    stage: dev
+    notes: Fast-iteration alternative. 28 KiB/token, so more concurrency at the same context.
+
+  - name: Qwen2.5-7B-Instruct
+    kind: generation
+    provider: vllm
+    revision: "main-20260901"
+    quantization: fp16
+    params_b: 7.6
+    context_length: 32768
+    vram_estimate_gb: 16.72
+    kv_bytes_per_token: 57344
+    stage: retired
+    notes: >-
+      Does not fit — 16.72 GB of weights on an 8 GB card. Kept in the registry so
+      `verify` would catch any attempt to promote it, which is the point of
+      recording VRAM arithmetic rather than discovering it at deploy time.
+
+  - name: BAAI/bge-small-en-v1.5
+    kind: embedding
+    provider: fastembed
+    revision: "5c38ec7c405ec4b44b94cc5a9bb96e735b38267a"
+    dim: 384
+    vram_estimate_gb: 0.07
+    stage: production
+    notes: >-
+      ONNX, 67 MB (ADR-020). Part of index_version, so changing it forces a
+      reindex — vectors from two models are not comparable.
+
+  - name: Xenova/ms-marco-MiniLM-L-6-v2
+    kind: reranker
+    provider: fastembed
+    revision: "e2e2cbd1e6a0d4a4b1c08c2f1e3b4b0d2a7f9c31"
+    vram_estimate_gb: 0.08
+    stage: dev
+    notes: >-
+      Measured equal to dense retrieval alone on the hard set for 98 ms (ADR-004),
+      so it stays at dev rather than production until a larger evaluation set says
+      otherwise.
+
+  - name: invoice-late-payment
+    kind: classical
+    provider: sklearn
+    revision: "1.0.0"
+    stage: production
+    notes: >-
+      LogisticRegression, 997-byte artifact. AUC 0.754 against a 0.726 majority
+      class baseline (docs/classical-ml-vs-llm-serving.md §5).

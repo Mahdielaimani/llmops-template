@@ -23,12 +23,14 @@ Guiding rule: **measure → find the bottleneck → optimize → scale the bottl
 | 6–7 LLM serving + vLLM | **deferred** — needs disk cleanup, [environment.md](docs/environment.md) §7.3 |
 | 8 RAG — ingestion + ACL-filtered retrieval | done — [docs/rag.md](docs/rag.md) |
 | 9 Hybrid retrieval + reranking | done — [docs/hybrid-retrieval.md](docs/hybrid-retrieval.md) |
-| 10 Prompt / model versioning | next |
+| 10 Prompt / model versioning | done — [docs/prompt-model-registry.md](docs/prompt-model-registry.md) |
+| 11 Evaluation | next |
 
 Full plan: [docs/roadmap.md](docs/roadmap.md). Decisions: [docs/adr/](docs/adr/).
 
 Design references:
 - [docs/security.md](docs/security.md) — seven enforcement points, 14-threat model, trust boundaries, and technology alternatives with trade-offs
+- [docs/prompt-model-registry.md](docs/prompt-model-registry.md) — immutable prompt versions, mutable stage pointers, and what `verify` refuses
 - [docs/hybrid-retrieval.md](docs/hybrid-retrieval.md) — why RRF lost to dense retrieval, measured per failure class
 - [docs/rag.md](docs/rag.md) — ingestion pipeline, ACL as a query predicate, measured retrieval quality against planted ground truth
 - [docs/kv-cache.md](docs/kv-cache.md) — the concurrency ceiling: 56 KiB/token, 11 sequences at 4k context, and why PagedAttention exists
@@ -81,7 +83,8 @@ LLMOPS_APP__LOG_FORMAT=console uv run poe dev
 | `poe lint` / `poe fmt` | ruff check + format |
 | `poe typecheck` | mypy strict over `packages/` and `apps/` |
 | `poe test-unit` / `poe test-integration` / `poe cov` | pytest |
-| `poe check` | lint + typecheck + unit — run before every commit |
+| `poe check` | lint + typecheck + **registry verify** + unit — run before every commit |
+| `poe registry` | prompt/model registry gate on its own |
 | `poe up` / `poe down` / `poe ps` / `poe logs` | Compose `core` profile |
 | `poe dev` | uvicorn with reload on :8080 |
 

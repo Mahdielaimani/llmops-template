@@ -9,6 +9,7 @@ dependencies = [
     "llm-application",
     "classical-ml",
     "rag-service",
+    "llmops-registry",
 ]
 
 [dependency-groups]
@@ -25,6 +26,7 @@ dev = [
     # Mechanics are implemented in numpy so every matmul is visible; torch and real
     # weights arrive in Phase 6 with the GPU, where the disk budget belongs.
     "tokenizers>=0.20",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 # ---------------------------------------------------------------------------
@@ -44,6 +46,7 @@ llmops-core = { workspace = true }
 llm-application = { workspace = true }
 classical-ml = { workspace = true }
 rag-service = { workspace = true }
+llmops-registry = { workspace = true }
 
 # ---------------------------------------------------------------------------
 # Task runner (replaces Makefile on Windows; Makefile delegates here).
@@ -57,11 +60,12 @@ fmt = ["_ruff_fmt", "_ruff_fix"]
 _ruff_fmt = "ruff format ."
 _ruff_fix = "ruff check --fix ."
 typecheck = "mypy packages apps"
+registry = "llmops-registry verify"
 test = "pytest"
 test-unit = "pytest tests/unit"
 test-integration = "pytest tests/integration -m integration"
 cov = "pytest --cov --cov-report=term-missing"
-check = ["lint", "typecheck", "test-unit"]
+check = ["lint", "typecheck", "registry", "test-unit"]
 
 dev = "uvicorn llm_application.main:app --host 0.0.0.0 --port 8080 --reload"
 
@@ -102,6 +106,7 @@ ignore = ["S101"]  # assert allowed in tests
 # generator rather than a security primitive.
 "**/corpus.py" = ["T20", "S311"]
 "**/ingest.py" = ["T20"]
+"**/cli.py" = ["T20"]
 # Teaching scripts: the printed output IS the deliverable, and they import a
 # sibling module after a sys.path insert, which E402 cannot express.
 "inference/experiments/**" = ["T20", "E402", "ANN001"]
@@ -111,7 +116,7 @@ python_version = "3.12"
 strict = true
 warn_unreachable = true
 plugins = ["pydantic.mypy"]
-mypy_path = "packages/llmops-core/src:apps/llm-application/src:apps/classical-ml/src:apps/rag-service/src"
+mypy_path = "packages/llmops-core/src:packages/llmops-registry/src:apps/llm-application/src:apps/classical-ml/src:apps/rag-service/src"
 namespace_packages = true
 explicit_package_bases = true
 

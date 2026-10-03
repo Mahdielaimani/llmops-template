@@ -1,0 +1,29 @@
+name: rag_answer
+family: rag
+purpose: Answer a question strictly from ACL-filtered retrieved sources, with citations.
+owner: platform-team
+stages:
+  production: 1.0.0
+  staging: 1.1.0
+versions:
+- version: 1.0.0
+  sha256: 5eee00f59e3c599e3d3a6a34e1415add448178f49245e75c197067160548fcc5
+  released_at: '2026-10-03T19:17:33+00:00'
+  model_compatibility:
+  - Qwen2.5-7B-Instruct-AWQ
+  - mock-1
+  variables:
+  - context
+  - question
+  eval_run: null
+  notes: 'initial: strict grounding, insufficient_evidence escape, sources framed as data'
+- version: 1.1.0
+  sha256: 5b8a37c423426dbc6d7a4aaa120505ae79183c9bb0951844f8d5905ddb6946a3
+  released_at: '2026-10-03T19:17:55+00:00'
+  model_compatibility:
+  - Qwen2.5-7B-Instruct-AWQ
+  variables:
+  - context
+  - question
+  eval_run: null
+  notes: adds superseded-version handling (rule 6) and forbids derived figures (rule 7)
