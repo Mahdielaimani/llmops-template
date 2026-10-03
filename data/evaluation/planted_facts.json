@@ -1,0 +1,122 @@
+[
+  {
+    "question": "What was Q1 FY2026 revenue for emea sales?",
+    "answer": "EUR 959,065.78",
+    "doc_id": "QR-EMEA-SALES-Q1FY2026",
+    "doc_version": 1,
+    "page": 1,
+    "classification": "internal",
+    "department": "emea-sales",
+    "min_clearance": "internal"
+  },
+  {
+    "question": "What was Q2 FY2026 revenue for emea sales?",
+    "answer": "EUR 1,006,694.02",
+    "doc_id": "QR-EMEA-SALES-Q2FY2026",
+    "doc_version": 1,
+    "page": 1,
+    "classification": "internal",
+    "department": "emea-sales",
+    "min_clearance": "internal"
+  },
+  {
+    "question": "What was Q3 FY2026 revenue for emea sales?",
+    "answer": "EUR 1,201,575.29",
+    "doc_id": "QR-EMEA-SALES-Q3FY2026",
+    "doc_version": 1,
+    "page": 1,
+    "classification": "internal",
+    "department": "emea-sales",
+    "min_clearance": "internal"
+  },
+  {
+    "question": "What was Q1 FY2026 revenue for apac sales?",
+    "answer": "EUR 1,654,907.04",
+    "doc_id": "QR-APAC-SALES-Q1FY2026",
+    "doc_version": 1,
+    "page": 1,
+    "classification": "internal",
+    "department": "apac-sales",
+    "min_clearance": "internal"
+  },
+  {
+    "question": "What was Q2 FY2026 revenue for apac sales?",
+    "answer": "EUR 1,751,300.84",
+    "doc_id": "QR-APAC-SALES-Q2FY2026",
+    "doc_version": 1,
+    "page": 1,
+    "classification": "internal",
+    "department": "apac-sales",
+    "min_clearance": "internal"
+  },
+  {
+    "question": "What was Q3 FY2026 revenue for apac sales?",
+    "answer": "EUR 1,975,640.95",
+    "doc_id": "QR-APAC-SALES-Q3FY2026",
+    "doc_version": 1,
+    "page": 1,
+    "classification": "internal",
+    "department": "apac-sales",
+    "min_clearance": "internal"
+  },
+  {
+    "question": "What is the restated Q2 FY2026 revenue for EMEA sales?",
+    "answer": "EUR 986,474.95",
+    "doc_id": "QR-EMEA-SALES-Q2FY2026",
+    "doc_version": 2,
+    "page": 1,
+    "classification": "internal",
+    "department": "emea-sales",
+    "min_clearance": "internal"
+  },
+  {
+    "question": "What is the receipt threshold for expense claims?",
+    "answer": "EUR 25.00",
+    "doc_id": "POL-EXPENSE-001",
+    "doc_version": 3,
+    "page": 1,
+    "classification": "public",
+    "department": "finance",
+    "min_clearance": "public"
+  },
+  {
+    "question": "How much revenue did audit finding 2026-014 identify as misstated?",
+    "answer": "EUR 295,971.63",
+    "doc_id": "AUD-2026-014",
+    "doc_version": 1,
+    "page": 1,
+    "classification": "restricted",
+    "department": "audit",
+    "min_clearance": "restricted"
+  },
+  {
+    "question": "What is the indicative offer for Project Helios?",
+    "answer": "EUR 107,238,761.66",
+    "doc_id": "MA-PROJECT-HELIOS-001",
+    "doc_version": 1,
+    "page": 1,
+    "classification": "confidential",
+    "department": "corp-dev",
+    "min_clearance": "confidential"
+  },
+  {
+    "question": "What is the FY2026 discretionary budget for finance?",
+    "answer": "EUR 228,749.67",
+    "doc_id": "BUD-FINANCE-FY2026",
+    "doc_version": 1,
+    "page": 1,
+    "classification": "internal",
+    "department": "finance",
+    "min_clearance": "internal"
+  },
+  {
+    "question": "What is the FY2026 discretionary budget for emea sales?",
+    "answer": "EUR 149,126.21",
+    "doc_id": "BUD-EMEA-SALES-FY2026",
+    "doc_version": 1,
+    "page": 1,
+    "classification": "internal",
+    "department": "emea-sales",
+    "min_clearance": "internal"
+  }
+]

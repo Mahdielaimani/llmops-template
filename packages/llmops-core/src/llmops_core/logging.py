@@ -78,6 +78,11 @@ def configure_logging(*, level: str = "INFO", fmt: str = "json", service: str = 
         logging.getLogger(name).propagate = True
     logging.getLogger("uvicorn.access").disabled = True
 
+    # httpx logs every outbound request at INFO. Via qdrant-client that is one line
+    # per search, which buries the retrieval line that actually carries the metrics.
+    for name in ("httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.WARNING)
+
 
 def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     return structlog.get_logger(name)  # type: ignore[no-any-return]

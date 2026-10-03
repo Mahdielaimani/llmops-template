@@ -20,12 +20,15 @@ Guiding rule: **measure → find the bottleneck → optimize → scale the bottl
 | 3 Classical ML serving comparison | done — [docs/classical-ml-vs-llm-serving.md](docs/classical-ml-vs-llm-serving.md) |
 | 4 Transformer inference concepts | done — [docs/inference.md](docs/inference.md) |
 | 5 Prefill / decode / KV cache | done — [prefill-decode.md](docs/prefill-decode.md), [kv-cache.md](docs/kv-cache.md) |
-| 6 LLM serving + vLLM | next — **needs disk cleanup**, see [environment.md](docs/environment.md) §7.3 |
+| 6–7 LLM serving + vLLM | **deferred** — needs disk cleanup, [environment.md](docs/environment.md) §7.3 |
+| 8 RAG — ingestion + ACL-filtered retrieval | done — [docs/rag.md](docs/rag.md) |
+| 9 Hybrid retrieval + reranking | next |
 
 Full plan: [docs/roadmap.md](docs/roadmap.md). Decisions: [docs/adr/](docs/adr/).
 
 Design references:
 - [docs/security.md](docs/security.md) — seven enforcement points, 14-threat model, trust boundaries, and technology alternatives with trade-offs
+- [docs/rag.md](docs/rag.md) — ingestion pipeline, ACL as a query predicate, measured retrieval quality against planted ground truth
 - [docs/kv-cache.md](docs/kv-cache.md) — the concurrency ceiling: 56 KiB/token, 11 sequences at 4k context, and why PagedAttention exists
 - [docs/prefill-decode.md](docs/prefill-decode.md) — two phases, two bottlenecks; the KV cache proved exact
 - [docs/inference.md](docs/inference.md) — tokenization, embeddings, attention, Q/K/V, logits and sampling, measured from runnable experiments
@@ -104,6 +107,7 @@ profile at once. Budget per profile in [docs/environment.md §6](docs/environmen
 | --- | --- | --- |
 | `core` | api, postgres, redis, qdrant | Phase 1 |
 | `classical` | classical-ml (`/predict`, sklearn) | Phase 3 |
+| `rag` | rag-service (`/rag`, ACL-filtered retrieval) | Phase 8 |
 | `inference` | vllm (GPU) | Phase 6 |
 | `eval` | mlflow | Phase 13 |
 | `edge` | kong | Phase 16 |

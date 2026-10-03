@@ -24,5 +24,6 @@ Numbering 001–010 follows the master prompt's list; 011+ are additional.
 | [017](ADR-017-otel-genai-semconv.md) | Adopt OTel GenAI semantic conventions where they exist | Accepted | 2 → 22 |
 | [018](ADR-018-provider-abstraction.md) | One provider interface for mock / local / external LLMs | Accepted | 2 |
 | [019](ADR-019-authorization-model.md) | RBAC for capabilities, ABAC for data, ACL as a query predicate, ACL-scoped cache | Accepted | 11 → 24 |
+| [020](ADR-020-fastembed-over-sentence-transformers.md) | fastembed (ONNX) rather than sentence-transformers | Accepted | 8 |
 
 Template: [ADR-000-template.md](ADR-000-template.md)

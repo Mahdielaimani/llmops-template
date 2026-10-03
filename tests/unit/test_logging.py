@@ -54,3 +54,13 @@ def test_stdlib_loggers_share_formatter(capsys: pytest.CaptureFixture[str]) -> N
     assert line["event"] == "legacy msg"
     assert line["level"] == "warning"
     assert line["logger"] == "third.party"
+
+
+def test_httpx_request_logs_are_suppressed(capsys: pytest.CaptureFixture[str]) -> None:
+    """qdrant-client issues one httpx INFO line per search, which would bury the
+    retrieval line carrying the actual metrics."""
+    configure_logging(level="INFO", fmt="json", service="svc-test")
+    logging.getLogger("httpx").info("HTTP Request: POST /points/query 200 OK")
+    assert capsys.readouterr().out.strip() == ""
+    logging.getLogger("httpx").warning("connection pool exhausted")
+    assert "connection pool exhausted" in capsys.readouterr().out
