@@ -1,0 +1,26 @@
+[project]
+name = "llmops-eval"
+version = "0.1.0"
+description = "Offline evaluation: retrieval metrics, ACL gate, quality thresholds, baseline reports"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "llmops-core",
+    "llmops-registry",
+    "rag-service",
+    "pydantic>=2.9",
+]
+
+[tool.uv.sources]
+llmops-core = { workspace = true }
+llmops-registry = { workspace = true }
+rag-service = { workspace = true }
+
+[project.scripts]
+llmops-eval = "llmops_eval.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/llmops_eval"]

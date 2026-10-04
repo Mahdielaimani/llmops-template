@@ -7,6 +7,7 @@ members = [
     "classical-ml",
     "llm-application",
     "llmops-core",
+    "llmops-eval",
     "llmops-platform",
     "llmops-registry",
     "rag-service",
@@ -550,6 +551,25 @@ requires-dist = [
 ]
 
 [[package]]
+name = "llmops-eval"
+version = "0.1.0"
+source = { editable = "packages/llmops-eval" }
+dependencies = [
+    { name = "llmops-core" },
+    { name = "llmops-registry" },
+    { name = "pydantic" },
+    { name = "rag-service" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "llmops-core", editable = "packages/llmops-core" },
+    { name = "llmops-registry", editable = "packages/llmops-registry" },
+    { name = "pydantic", specifier = ">=2.9" },
+    { name = "rag-service", editable = "apps/rag-service" },
+]
+
+[[package]]
 name = "llmops-platform"
 version = "0.1.0"
 source = { virtual = "." }
@@ -557,6 +577,7 @@ dependencies = [
     { name = "classical-ml" },
     { name = "llm-application" },
     { name = "llmops-core" },
+    { name = "llmops-eval" },
     { name = "llmops-registry" },
     { name = "rag-service" },
 ]
@@ -580,6 +601,7 @@ requires-dist = [
     { name = "classical-ml", editable = "apps/classical-ml" },
     { name = "llm-application", editable = "apps/llm-application" },
     { name = "llmops-core", editable = "packages/llmops-core" },
+    { name = "llmops-eval", editable = "packages/llmops-eval" },
     { name = "llmops-registry", editable = "packages/llmops-registry" },
     { name = "rag-service", editable = "apps/rag-service" },
 ]

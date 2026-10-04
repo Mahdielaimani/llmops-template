@@ -24,12 +24,14 @@ Guiding rule: **measure → find the bottleneck → optimize → scale the bottl
 | 8 RAG — ingestion + ACL-filtered retrieval | done — [docs/rag.md](docs/rag.md) |
 | 9 Hybrid retrieval + reranking | done — [docs/hybrid-retrieval.md](docs/hybrid-retrieval.md) |
 | 10 Prompt / model versioning | done — [docs/prompt-model-registry.md](docs/prompt-model-registry.md) |
-| 11 Evaluation | next |
+| 11 Evaluation | done — [docs/evaluation.md](docs/evaluation.md) |
+| 12 LLM-as-a-Judge | next |
 
 Full plan: [docs/roadmap.md](docs/roadmap.md). Decisions: [docs/adr/](docs/adr/).
 
 Design references:
 - [docs/security.md](docs/security.md) — seven enforcement points, 14-threat model, trust boundaries, and technology alternatives with trade-offs
+- [docs/evaluation.md](docs/evaluation.md) — the 113-item dataset, arithmetic metrics, the ACL hard gate, and the Phase 9 conclusion it reversed
 - [docs/prompt-model-registry.md](docs/prompt-model-registry.md) — immutable prompt versions, mutable stage pointers, and what `verify` refuses
 - [docs/hybrid-retrieval.md](docs/hybrid-retrieval.md) — why RRF lost to dense retrieval, measured per failure class
 - [docs/rag.md](docs/rag.md) — ingestion pipeline, ACL as a query predicate, measured retrieval quality against planted ground truth
@@ -85,6 +87,7 @@ LLMOPS_APP__LOG_FORMAT=console uv run poe dev
 | `poe test-unit` / `poe test-integration` / `poe cov` | pytest |
 | `poe check` | lint + typecheck + **registry verify** + unit — run before every commit |
 | `poe registry` | prompt/model registry gate on its own |
+| `uv run llmops-eval gate` | retrieval quality + ACL gate (Q-1, Q-2, Q-6) |
 | `poe up` / `poe down` / `poe ps` / `poe logs` | Compose `core` profile |
 | `poe dev` | uvicorn with reload on :8080 |
 

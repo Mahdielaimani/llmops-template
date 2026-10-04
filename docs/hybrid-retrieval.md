@@ -4,6 +4,13 @@
 `benchmarks/retrieval_modes.py` against two question sets with planted ground
 truth.
 
+> **CORRECTED IN PHASE 11.** The headline below was measured on 12 questions.
+> Re-run at n=113 ([evaluation.md](evaluation.md) §5), **RRF is no longer worse
+> than dense** — 0.894 against 0.876. The *mechanism* identified here held (RRF
+> still damages paraphrase), and so did the other three conclusions, but the
+> aggregate headline was an artifact of the sample size this document itself
+> warned about in §7. Read §7 before quoting any number here.
+
 **Headline: RRF hybrid scored *worse* than dense retrieval alone, and the
 cross-encoder reranker added 98 ms for no aggregate gain.** Weighted fusion won.
 The per-class breakdown shows why, and the conclusion is a changed default — not

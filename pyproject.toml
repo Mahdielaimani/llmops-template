@@ -10,6 +10,7 @@ dependencies = [
     "classical-ml",
     "rag-service",
     "llmops-registry",
+    "llmops-eval",
 ]
 
 [dependency-groups]
@@ -47,6 +48,7 @@ llm-application = { workspace = true }
 classical-ml = { workspace = true }
 rag-service = { workspace = true }
 llmops-registry = { workspace = true }
+llmops-eval = { workspace = true }
 
 # ---------------------------------------------------------------------------
 # Task runner (replaces Makefile on Windows; Makefile delegates here).
@@ -106,6 +108,7 @@ ignore = ["S101"]  # assert allowed in tests
 # generator rather than a security primitive.
 "**/corpus.py" = ["T20", "S311"]
 "**/ingest.py" = ["T20"]
+"**/evalset.py" = ["T20"]
 "**/cli.py" = ["T20"]
 # Teaching scripts: the printed output IS the deliverable, and they import a
 # sibling module after a sys.path insert, which E402 cannot express.
@@ -116,7 +119,7 @@ python_version = "3.12"
 strict = true
 warn_unreachable = true
 plugins = ["pydantic.mypy"]
-mypy_path = "packages/llmops-core/src:packages/llmops-registry/src:apps/llm-application/src:apps/classical-ml/src:apps/rag-service/src"
+mypy_path = "packages/llmops-core/src:packages/llmops-registry/src:apps/llm-application/src:apps/classical-ml/src:apps/rag-service/src:packages/llmops-eval/src"
 namespace_packages = true
 explicit_package_bases = true
 

@@ -26,5 +26,6 @@ Numbering 001–010 follows the master prompt's list; 011+ are additional.
 | [019](ADR-019-authorization-model.md) | RBAC for capabilities, ABAC for data, ACL as a query predicate, ACL-scoped cache | Accepted | 11 → 24 |
 | [020](ADR-020-fastembed-over-sentence-transformers.md) | fastembed (ONNX) rather than sentence-transformers | Accepted | 8 |
 | [021](ADR-021-prompt-registry-design.md) | Prompt registry: files in Git, hashes for immutability, pointers for stages | Accepted | 10 |
+| [022](ADR-022-evaluation-design.md) | Evaluation: generated ground truth, arithmetic metrics, library not service | Accepted | 11 |
 
 Template: [ADR-000-template.md](ADR-000-template.md)
