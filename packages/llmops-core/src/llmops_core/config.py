@@ -75,6 +75,15 @@ class QdrantSettings(BaseModel):
     api_key: SecretStr | None = None
 
 
+class RagSettings(BaseModel):
+    # Unset keeps /rag retrieval-only with a null answer, rather than quietly
+    # answering from a mock and looking complete.
+    generator_url: str | None = None
+    prompt_ref: str = "production"  # a stage or an explicit version
+    timeout_s: float = Field(default=60.0, gt=0)
+    max_tokens: int = Field(default=400, ge=1)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="LLMOPS_",
@@ -91,6 +100,7 @@ class Settings(BaseSettings):
     postgres: PostgresSettings = PostgresSettings()
     redis: RedisSettings = RedisSettings()
     qdrant: QdrantSettings = QdrantSettings()
+    rag: RagSettings = RagSettings()
 
 
 @lru_cache(maxsize=1)

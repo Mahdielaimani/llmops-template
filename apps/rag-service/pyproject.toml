@@ -5,6 +5,7 @@ description = "Retrieval service: ingestion pipeline and ACL-filtered hybrid ret
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "llmops-core",
+    "llmops-registry",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
     "httpx>=0.28",
@@ -18,6 +19,7 @@ dependencies = [
 
 [tool.uv.sources]
 llmops-core = { workspace = true }
+llmops-registry = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]

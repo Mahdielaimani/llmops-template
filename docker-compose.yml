@@ -55,6 +55,9 @@ services:
       LLMOPS_APP__LOG_FORMAT: json
       LLMOPS_APP__LOG_LEVEL: ${LLMOPS_APP__LOG_LEVEL:-INFO}
       LLMOPS_QDRANT__URL: http://qdrant:6333
+      # Service discovery by Compose DNS name. Empty disables generation (answer null).
+      LLMOPS_RAG__GENERATOR_URL: ${LLMOPS_RAG__GENERATOR_URL-http://api:8080}
+      LLMOPS_RAG__PROMPT_REF: ${LLMOPS_RAG__PROMPT_REF:-production}
     ports:
       - "8070:8070"
     depends_on:

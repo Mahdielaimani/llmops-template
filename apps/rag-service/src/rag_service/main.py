@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import date
 
+import httpx
 from fastapi import APIRouter, FastAPI, Header, Request
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
@@ -16,9 +17,11 @@ from llmops_core.context import RequestContextMiddleware, get_request_id
 from llmops_core.errors import NotFoundError, install_error_handlers
 from llmops_core.health import HealthRegistry, build_health_router
 from llmops_core.logging import configure_logging, get_logger
+from llmops_registry.prompts import PromptRegistry
 from rag_service.acl import AclPredicate, Classification, RagRequest, User
 from rag_service.embedding import Embedder
 from rag_service.fusion import Reranker
+from rag_service.generation import Generator
 from rag_service.lexical import LexicalIndex, load_payloads
 from rag_service.pipeline import Mode, RetrievalPipeline
 from rag_service.retriever import Retriever, build_context
@@ -39,13 +42,22 @@ class Citation(BaseModel):
 
 
 class RagResponse(BaseModel):
-    """`grounded` is True by contract here, unlike /chat. `answer` is null until the
-    model gateway is wired (Phase 15) — retrieval is what Phase 8 delivers, and
-    returning a fabricated answer to look complete would be worse than null."""
+    """`grounded` is True by contract here, unlike /chat. `answer` is null when no
+    generator is configured: returning a fabricated answer to look complete would be
+    worse than null. `citations` lists what was supplied; `cited` and
+    `invalid_citations` are what the answer actually referenced."""
 
     question: str
     answer: str | None
     citations: list[Citation]
+    abstained: bool | None = None
+    cited: list[str] = []
+    invalid_citations: list[str] = []
+    prompt_ref: str | None = None
+    generator_model: str | None = None
+    generation_ms: float = 0.0
+    input_tokens: int | None = None
+    output_tokens: int | None = None
     context_chars: int
     grounded: bool = True
     request_id: str | None = None
@@ -127,12 +139,32 @@ async def rag(
         top_k=body.top_k,
         candidates=body.candidates,
     )
-    context, _ = build_context(result.chunks)
+    context, supplied = build_context(result.chunks)
+
+    generator: Generator | None = request.app.state.generator
+    gen = await generator.generate(body.question, context, supplied) if generator else None
+    if gen:
+        log.info(
+            "rag_generation",
+            prompt=gen.prompt_ref,
+            model=gen.model,
+            abstained=gen.abstained,
+            cited=len(gen.citations.cited),
+            invalid_citations=len(gen.citations.invalid),
+            generation_ms=gen.latency_ms,
+        )
 
     return RagResponse(
         question=body.question,
-        # Deliberately null: generation arrives with the model gateway in Phase 15.
-        answer=None,
+        answer=gen.answer if gen else None,
+        abstained=gen.abstained if gen else None,
+        cited=gen.citations.cited if gen else [],
+        invalid_citations=gen.citations.invalid if gen else [],
+        prompt_ref=gen.prompt_ref if gen else None,
+        generator_model=gen.model if gen else None,
+        generation_ms=gen.latency_ms if gen else 0.0,
+        input_tokens=gen.input_tokens if gen else None,
+        output_tokens=gen.output_tokens if gen else None,
         citations=[
             Citation(
                 citation=c.citation,
@@ -227,8 +259,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             client.get_collections()
 
         health.register("qdrant", qdrant_ready)
+
+        app.state.generator = None
+        http: httpx.AsyncClient | None = None
+        if settings.rag.generator_url:
+            # Resolved once at startup: an edited or missing prompt fails the deploy,
+            # not the first user request.
+            prompt = PromptRegistry().get("rag", "rag_answer", settings.rag.prompt_ref)
+            http = httpx.AsyncClient(base_url=settings.rag.generator_url)
+            app.state.generator = Generator(
+                http, prompt, max_tokens=settings.rag.max_tokens, timeout_s=settings.rag.timeout_s
+            )
+            app.state.ingest_summary["prompt"] = prompt.ref
+        app.state.ingest_summary["generation"] = bool(app.state.generator)
+
         log.info("startup", **app.state.ingest_summary)
         yield
+        if http:
+            await http.aclose()
         client.close()
         log.info("shutdown")
 

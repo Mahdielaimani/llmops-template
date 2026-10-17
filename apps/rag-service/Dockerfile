@@ -13,11 +13,15 @@ WORKDIR /build
 
 COPY pyproject.toml uv.lock ./
 COPY packages/llmops-core/pyproject.toml packages/llmops-core/
+COPY packages/llmops-registry/pyproject.toml packages/llmops-registry/
 COPY apps/rag-service/pyproject.toml apps/rag-service/
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-install-workspace --package rag-service
 
 COPY packages/llmops-core packages/llmops-core
+COPY packages/llmops-registry packages/llmops-registry
+# The registry resolves prompts relative to the workspace root (/build/prompts).
+COPY prompts prompts
 COPY apps/rag-service apps/rag-service
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --package rag-service
