@@ -267,18 +267,19 @@ fails its gates, and a test asserts that invariant.
 
 | Gap | Phase |
 |---|---|
-| **Generation metrics** — correctness, faithfulness, citation validity | 12 (judge), 15 (generation exists) |
+| **Generation metrics** — built in Phase 12 (`docs/llm-as-a-judge.md`); citation validity and exact match are deterministic, the rest judged. **Not yet run** | 12 |
 | Abstention measured rather than declared | 15 |
-| LLM-as-a-Judge, with its bias documented | 12 |
+| LLM-as-a-Judge, with its bias documented — built, calibration pending a run | 12 |
 | Runs tracked in MLflow with parameters and artifacts | 13 |
 | Regression gate on pull requests | 14 |
 | `top_k` sweep against the 0.28 context precision | 14 |
-| Human evaluation sample to calibrate the judge | 12 |
+| Human evaluation sample to calibrate the judge — tooling built, labels pending | 12 |
 | Online / production evaluation | 22 |
 
-Generation is the significant absence, and it is absent for a reason: there is no
-generation in the system until Phase 15. Reporting a faithfulness score now would
-mean inventing one.
+Generation was the significant absence when this was written, for a reason: there
+was no generation in the system, and reporting a faithfulness score would have meant
+inventing one. Phase 12 added generation to `/rag` and the judge harness; the scores
+appear in `docs/llm-as-a-judge.md` §9 once they have been measured, not before.
 
 ---
 
