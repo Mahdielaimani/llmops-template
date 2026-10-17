@@ -23,6 +23,7 @@ times.
 
 from __future__ import annotations
 
+import random
 import re
 from collections import defaultdict
 from dataclasses import dataclass
@@ -283,3 +284,77 @@ def cohen_kappa(a: list[str], b: list[str]) -> float | None:
 
 def _rate(num: int, den: int) -> float | None:
     return round(num / den, 4) if den else None
+
+
+HUMAN_COLUMNS = ["human_faithful", "human_relevance", "human_notes"]
+FAITHFUL_LABELS = {"supported", "unsupported"}
+RELEVANCE_LABELS = {"relevant", "partially_relevant", "irrelevant"}
+
+
+def human_sample(answers: list[dict[str, Any]], n: int, seed: int) -> list[dict[str, Any]]:
+    """Stratified by hardness so the sample is not all easy planted lookups, and
+    blind: the judge's verdict is deliberately absent, because a labeller shown
+    the judge's answer agrees with it more than the answer deserves."""
+    rng = random.Random(seed)  # noqa: S311 — reproducible sampling, not security
+    by_class: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for a in answers:
+        if not a.get("error"):
+            by_class[a["hardness"]].append(a)
+    for rows in by_class.values():
+        rng.shuffle(rows)
+    picked: list[dict[str, Any]] = []
+    while len(picked) < n and any(by_class.values()):
+        for cls in sorted(by_class):
+            if by_class[cls] and len(picked) < n:
+                picked.append(by_class[cls].pop())
+    return [
+        {
+            "id": a["id"],
+            "hardness": a["hardness"],
+            "question": a["question"],
+            "answer": a["answer"],
+            "context": a["context"],
+            **dict.fromkeys(HUMAN_COLUMNS, ""),
+        }
+        for a in picked
+    ]
+
+
+def human_agreement(labels: list[dict[str, str]], judged: list[dict[str, Any]]) -> dict[str, Any]:
+    """Judge faithfulness is a fraction; a human labels the whole answer. An answer
+    is `supported` only if every claim is, which is the strict reading the judge's
+    score of 1.0 also means."""
+    verdicts = {row["id"]: row.get("verdicts", {}) for row in judged}
+    pairs: dict[str, tuple[list[str], list[str]]] = {
+        "faithfulness": ([], []),
+        "relevance": ([], []),
+    }
+    invalid: list[str] = []
+    for row in labels:
+        v = verdicts.get(row["id"], {})
+        faithful = row.get("human_faithful", "").strip().lower()
+        relevance = row.get("human_relevance", "").strip().lower()
+        if faithful and faithful not in FAITHFUL_LABELS:
+            invalid.append(f"{row['id']}: human_faithful={faithful!r}")
+        elif (
+            faithful
+            and (f := v.get("faithfulness"))
+            and f["status"] == "ok"
+            and f["score"] is not None
+        ):
+            pairs["faithfulness"][0].append(faithful)
+            pairs["faithfulness"][1].append("supported" if f["score"] >= 1.0 else "unsupported")
+        if relevance and relevance not in RELEVANCE_LABELS:
+            invalid.append(f"{row['id']}: human_relevance={relevance!r}")
+        elif relevance and (r := v.get("relevance")) and r["status"] == "ok":
+            pairs["relevance"][0].append(relevance)
+            pairs["relevance"][1].append(r["verdict"])
+    out: dict[str, Any] = {"invalid_labels": invalid}
+    for name, (human, judge) in pairs.items():
+        n = len(human)
+        out[name] = {
+            "n": n,
+            "raw_agreement": _rate(sum(h == j for h, j in zip(human, judge, strict=True)), n),
+            "kappa": cohen_kappa(human, judge),
+        }
+    return out

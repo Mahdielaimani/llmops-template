@@ -7,6 +7,7 @@
     uv run llmops-eval generate                 # answers.jsonl via llm-application
     uv run llmops-eval judge evaluations/answers/answers-<ts>.jsonl
     uv run llmops-eval calibrate evaluations/answers/answers-<ts>.jsonl --judged <judged>
+    uv run llmops-eval human-sample <answers>   then   human-agreement <csv> <judged>
 
 `gate` is what CI calls. It fails on any unauthorized retrieval (Q-6) regardless
 of the other numbers, and on Recall@5 or MRR below the thresholds in
@@ -17,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import csv
 import json
 import os
 import shutil
@@ -30,6 +32,8 @@ import httpx
 from llmops_eval.calibration import (
     agreement_with_exact_match,
     build_probes,
+    human_agreement,
+    human_sample,
     position_probe,
     run_probes,
     summarise_probes,
@@ -37,6 +41,7 @@ from llmops_eval.calibration import (
 from llmops_eval.generation import (
     ANSWERS_DIR,
     CALIBRATION_DIR,
+    HUMAN_DIR,
     JUDGED_DIR,
     AnswerRecord,
     deterministic_summary,
@@ -367,6 +372,30 @@ def cmd_calibrate(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_human_sample(args: argparse.Namespace) -> int:
+    _, answers = load_jsonl(Path(args.answers))
+    rows = human_sample(answers, args.n, args.seed)
+    path = HUMAN_DIR / f"{new_run_id('human')}-{Path(args.answers).stem}.csv"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8-sig", newline="") as f:  # BOM: Excel reads UTF-8
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"{len(rows)} items -> {path}")
+    print("fill human_faithful (supported|unsupported) and human_relevance")
+    print("(relevant|partially_relevant|irrelevant) without looking at the judge's output")
+    return 0
+
+
+def cmd_human_agreement(args: argparse.Namespace) -> int:
+    with Path(args.labels).open(encoding="utf-8-sig", newline="") as f:
+        labels = list(csv.DictReader(f))
+    _, judged = load_jsonl(Path(args.judged))
+    result = human_agreement(labels, judged)
+    print(json.dumps(result, indent=2))
+    return 1 if result["invalid_labels"] else 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="llmops-eval", description=__doc__)
     parser.add_argument("--results", default=str(RESULTS_DIR), help=argparse.SUPPRESS)
@@ -423,6 +452,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--prompt", default="dev")
     p.add_argument("--repeats", type=int, default=2, help="correctness calls per probe")
     p.set_defaults(fn=cmd_calibrate)
+
+    p = sub.add_parser("human-sample", help="blind, stratified CSV for human labelling")
+    p.add_argument("answers")
+    p.add_argument("--n", type=int, default=30)
+    p.add_argument("--seed", type=int, default=12)
+    p.set_defaults(fn=cmd_human_sample)
+
+    p = sub.add_parser("human-agreement", help="Cohen's kappa, human labels vs judge")
+    p.add_argument("labels", help="the filled human-*.csv")
+    p.add_argument("judged", help="judged-*.jsonl of the same answers")
+    p.set_defaults(fn=cmd_human_agreement)
 
     args = parser.parse_args(argv)
     return int(args.fn(args))

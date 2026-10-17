@@ -34,6 +34,7 @@ from rag_service.retriever import build_context
 ANSWERS_DIR = RESULTS_DIR / "answers"
 JUDGED_DIR = RESULTS_DIR / "judged"
 CALIBRATION_DIR = RESULTS_DIR / "calibration"
+HUMAN_DIR = RESULTS_DIR / "human"
 _SPACE = re.compile(r"\s+")
 
 

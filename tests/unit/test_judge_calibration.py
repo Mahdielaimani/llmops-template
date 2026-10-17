@@ -11,6 +11,8 @@ from llmops_eval.calibration import (
     agreement_with_exact_match,
     build_probes,
     cohen_kappa,
+    human_agreement,
+    human_sample,
     position_probe,
     run_probes,
     summarise_probes,
@@ -166,3 +168,38 @@ def test_kappa_perfect_and_undefined() -> None:
 @pytest.mark.parametrize("bad", [["a"], ["a", "b", "c"]])
 def test_kappa_requires_equal_length(bad: list[str]) -> None:
     assert cohen_kappa(["a", "b"], bad) is None
+
+
+def _answer(i: int, hardness: str) -> dict[str, Any]:
+    return {"id": f"q{i}", "hardness": hardness, "question": "q", "answer": "a", "context": "c"}
+
+
+def test_human_sample_is_stratified_blind_and_reproducible() -> None:
+    answers = [_answer(i, "paraphrase") for i in range(20)] + [_answer(100, "version")]
+    sample = human_sample(answers, n=4, seed=1)
+    assert len(sample) == 4
+    assert "version" in {s["hardness"] for s in sample}  # the rare class is not crowded out
+    assert not any("verdict" in key or "judge" in key for key in sample[0])
+    assert sample == human_sample(answers, n=4, seed=1)
+
+
+def test_human_agreement_maps_fractional_faithfulness_strictly() -> None:
+    judged = [
+        {"id": "a", "verdicts": {"faithfulness": {"status": "ok", "score": 1.0},
+                                 "relevance": {"status": "ok", "verdict": "relevant"}}},
+        {"id": "b", "verdicts": {"faithfulness": {"status": "ok", "score": 0.5},
+                                 "relevance": {"status": "ok", "verdict": "relevant"}}},
+    ]  # fmt: skip
+    labels = [
+        {"id": "a", "human_faithful": "supported", "human_relevance": "relevant"},
+        {"id": "b", "human_faithful": "supported", "human_relevance": "Relevant "},
+    ]
+    out = human_agreement(labels, judged)
+    assert out["faithfulness"]["raw_agreement"] == 0.5  # 0.5 is "unsupported", not half-agreed
+    assert out["relevance"]["raw_agreement"] == 1.0
+    assert out["invalid_labels"] == []
+
+
+def test_human_agreement_rejects_unknown_labels() -> None:
+    out = human_agreement([{"id": "a", "human_faithful": "yes"}], [])
+    assert out["invalid_labels"] == ["a: human_faithful='yes'"]
