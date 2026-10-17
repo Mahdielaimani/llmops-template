@@ -1,0 +1,18 @@
+name: correctness
+family: judge
+purpose: Grade an answer against the reference answer; figures must match exactly.
+owner: platform-team
+stages:
+  dev: 1.0.0
+versions:
+- version: 1.0.0
+  sha256: d60053e85f5522cdcd3c20e7e649006fdf4b6f1a7e22f11ffc08c89cfda1a63a
+  released_at: '2026-10-17T19:10:00+00:00'
+  model_compatibility:
+  - llama3.2:3b
+  variables:
+  - answer
+  - question
+  - reference
+  eval_run: null
+  notes: 'initial: three categorical labels, reason before verdict'

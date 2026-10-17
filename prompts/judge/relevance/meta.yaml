@@ -1,0 +1,17 @@
+name: relevance
+family: judge
+purpose: Judge whether an answer addresses the question asked, independent of truth.
+owner: platform-team
+stages:
+  dev: 1.0.0
+versions:
+- version: 1.0.0
+  sha256: e9884605a0c6d30feb916e2bf1c55ec61c776828f19f790f0be6d591cb777890
+  released_at: '2026-10-17T19:10:00+00:00'
+  model_compatibility:
+  - llama3.2:3b
+  variables:
+  - answer
+  - question
+  eval_run: null
+  notes: 'initial: three categorical labels, reason before verdict'

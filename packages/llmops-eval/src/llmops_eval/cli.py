@@ -4,6 +4,8 @@
     uv run llmops-eval compare-modes            # all five, the Phase 9 re-test
     uv run llmops-eval baseline --mode hybrid_weighted
     uv run llmops-eval gate --mode hybrid_weighted   # exits non-zero on failure
+    uv run llmops-eval generate                 # answers.jsonl via llm-application
+    uv run llmops-eval judge evaluations/answers/answers-<ts>.jsonl
 
 `gate` is what CI calls. It fails on any unauthorized retrieval (Q-6) regardless
 of the other numbers, and on Recall@5 or MRR below the thresholds in
@@ -13,12 +15,31 @@ docs/business-requirements.md §4.
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import os
 import shutil
 import sys
+import time
+from pathlib import Path
 from typing import Any
 
+import httpx
+
+from llmops_eval.generation import (
+    ANSWERS_DIR,
+    JUDGED_DIR,
+    AnswerRecord,
+    deterministic_summary,
+    generate,
+    judge_answers,
+    judge_summary,
+    load_jsonl,
+    new_run_id,
+    records_to_rows,
+    save_jsonl,
+)
+from llmops_eval.judge import RUBRICS, JudgeClient
 from llmops_eval.runner import (
     RESULTS_DIR,
     RunConfig,
@@ -30,9 +51,15 @@ from llmops_eval.runner import (
     run,
     save,
 )
+from llmops_registry.prompts import PromptRegistry
+from rag_service.generation import Generator
 from rag_service.pipeline import RetrievalPipeline
 
 QDRANT = os.getenv("LLMOPS_QDRANT__URL", "http://localhost:6333")
+GENERATOR_URL = os.getenv("LLMOPS_EVAL_GENERATOR_URL", "http://localhost:8080")
+# Defaults to a different model family from the generator (qwen2.5) on purpose.
+JUDGE_URL = os.getenv("LLMOPS_EVAL_JUDGE_URL", "http://localhost:11434/v1")
+JUDGE_MODEL = os.getenv("LLMOPS_EVAL_JUDGE_MODEL", "llama3.2:3b")
 MODES = ["dense", "lexical", "hybrid", "hybrid_weighted", "hybrid_rerank"]
 
 
@@ -218,6 +245,81 @@ def cmd_show_baseline(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_generate(args: argparse.Namespace) -> int:
+    items, version, sha = load_dataset()
+    if args.limit:
+        items = items[: args.limit]
+    pipeline, index_version, _, _ = build_pipeline(QDRANT)
+    prompt = PromptRegistry().get("rag", "rag_answer", args.prompt)
+    started = time.perf_counter()
+
+    async def go() -> list[AnswerRecord]:
+        async with httpx.AsyncClient(base_url=args.generator_url) as client:
+            generator = Generator(client, prompt, max_tokens=args.max_tokens, timeout_s=120.0)
+            return await generate(
+                pipeline,
+                generator,
+                items,
+                mode=args.mode,
+                top_k=args.top_k,
+                candidates=args.candidates,
+            )
+
+    records = asyncio.run(go())
+    summary = deterministic_summary(records)
+    run_id = new_run_id("answers")
+    header = {
+        "run_id": run_id,
+        "dataset": f"{version}/{sha}",
+        "index_version": index_version,
+        "prompt": prompt.ref,
+        "generator_model": next((r.generator_model for r in records if r.generator_model), ""),
+        "mode": args.mode,
+        "top_k": args.top_k,
+        "duration_s": round(time.perf_counter() - started, 1),
+        "summary": summary,
+    }
+    path = save_jsonl(ANSWERS_DIR / f"{run_id}.jsonl", header, records_to_rows(records))
+    print(json.dumps({k: v for k, v in header.items() if k != "summary"}, indent=2))
+    print(json.dumps(summary, indent=2))
+    print(f"saved {path}")
+    return 1 if summary["errors"] == len(records) else 0
+
+
+def cmd_judge(args: argparse.Namespace) -> int:
+    answers_path = Path(args.answers)
+    answers_header, rows = load_jsonl(answers_path)
+    if args.limit:
+        rows = rows[: args.limit]
+    rubrics = args.rubrics.split(",")
+    started = time.perf_counter()
+
+    async def go() -> list[dict[str, Any]]:
+        async with httpx.AsyncClient(base_url=args.judge_url) as client:
+            judge = JudgeClient(client, args.judge_model, prompt_ref=args.prompt)
+            return await judge_answers(judge, rows, rubrics)
+
+    judged = asyncio.run(go())
+    summary = judge_summary(judged)
+    if args.judge_model == answers_header.get("generator_model"):
+        print("WARNING judge model == generator model: self-preference bias is not controlled")
+    run_id = new_run_id("judged")
+    header = {
+        "run_id": run_id,
+        "answers": answers_path.name,
+        "generator_model": answers_header.get("generator_model"),
+        "judge_model": args.judge_model,
+        "judge_prompt_stage": args.prompt,
+        "rubrics": rubrics,
+        "duration_s": round(time.perf_counter() - started, 1),
+        "summary": summary,
+    }
+    path = save_jsonl(JUDGED_DIR / f"{run_id}.jsonl", header, judged)
+    print(json.dumps(summary, indent=2))
+    print(f"saved {path}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="llmops-eval", description=__doc__)
     parser.add_argument("--results", default=str(RESULTS_DIR), help=argparse.SUPPRESS)
@@ -248,6 +350,23 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("show-baseline", help="print the current baseline").set_defaults(
         fn=cmd_show_baseline
     )
+
+    p = sub.add_parser("generate", help="answer the dataset once, save answers.jsonl")
+    common(p)
+    p.add_argument("--generator-url", default=GENERATOR_URL, help="llm-application base URL")
+    p.add_argument("--prompt", default="production", help="rag_answer stage or version")
+    p.add_argument("--max-tokens", type=int, default=400)
+    p.add_argument("--limit", type=int, default=0, help="first N items only (smoke runs)")
+    p.set_defaults(fn=cmd_generate)
+
+    p = sub.add_parser("judge", help="score a saved answers.jsonl with an LLM judge")
+    p.add_argument("answers", help="path to an answers-*.jsonl file")
+    p.add_argument("--judge-url", default=JUDGE_URL, help="OpenAI-compatible base URL")
+    p.add_argument("--judge-model", default=JUDGE_MODEL)
+    p.add_argument("--prompt", default="dev", help="judge prompt stage or version")
+    p.add_argument("--rubrics", default=",".join(RUBRICS))
+    p.add_argument("--limit", type=int, default=0)
+    p.set_defaults(fn=cmd_judge)
 
     args = parser.parse_args(argv)
     return int(args.fn(args))

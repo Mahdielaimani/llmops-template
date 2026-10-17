@@ -1,0 +1,18 @@
+name: completeness
+family: judge
+purpose: Judge whether every part of the question the sources can answer is answered.
+owner: platform-team
+stages:
+  dev: 1.0.0
+versions:
+- version: 1.0.0
+  sha256: b4f866d48f6731f4ef6b3135042a395d5586fc409d63c44702dd9dd12b8fbf6d
+  released_at: '2026-10-17T19:10:00+00:00'
+  model_compatibility:
+  - llama3.2:3b
+  variables:
+  - answer
+  - context
+  - question
+  eval_run: null
+  notes: 'initial: three categorical labels, reason before verdict'
