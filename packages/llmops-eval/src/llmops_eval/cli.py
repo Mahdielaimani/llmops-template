@@ -6,6 +6,7 @@
     uv run llmops-eval gate --mode hybrid_weighted   # exits non-zero on failure
     uv run llmops-eval generate                 # answers.jsonl via llm-application
     uv run llmops-eval judge evaluations/answers/answers-<ts>.jsonl
+    uv run llmops-eval calibrate evaluations/answers/answers-<ts>.jsonl --judged <judged>
 
 `gate` is what CI calls. It fails on any unauthorized retrieval (Q-6) regardless
 of the other numbers, and on Recall@5 or MRR below the thresholds in
@@ -26,8 +27,16 @@ from typing import Any
 
 import httpx
 
+from llmops_eval.calibration import (
+    agreement_with_exact_match,
+    build_probes,
+    position_probe,
+    run_probes,
+    summarise_probes,
+)
 from llmops_eval.generation import (
     ANSWERS_DIR,
+    CALIBRATION_DIR,
     JUDGED_DIR,
     AnswerRecord,
     deterministic_summary,
@@ -39,7 +48,7 @@ from llmops_eval.generation import (
     records_to_rows,
     save_jsonl,
 )
-from llmops_eval.judge import RUBRICS, JudgeClient
+from llmops_eval.judge import POINTWISE, JudgeClient
 from llmops_eval.runner import (
     RESULTS_DIR,
     RunConfig,
@@ -320,6 +329,44 @@ def cmd_judge(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_calibrate(args: argparse.Namespace) -> int:
+    answers_header, answers = load_jsonl(Path(args.answers))
+    probes = build_probes(answers)
+    if not probes:
+        print("no probes: the answers file has no referenced item with its document retrieved")
+        return 1
+    started = time.perf_counter()
+
+    async def go() -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        async with httpx.AsyncClient(base_url=args.judge_url) as client:
+            judge = JudgeClient(client, args.judge_model, prompt_ref=args.prompt)
+            rows = await run_probes(judge, probes, args.repeats)
+            return rows, await position_probe(judge, probes)
+
+    rows, bias = asyncio.run(go())
+    report: dict[str, Any] = {
+        "run_id": new_run_id("calibration"),
+        "answers": Path(args.answers).name,
+        "generator_model": answers_header.get("generator_model"),
+        "judge_model": args.judge_model,
+        "judge_prompt_stage": args.prompt,
+        "n_probes": len(probes),
+        "repeats": args.repeats,
+        "probes": summarise_probes(rows),
+        "bias": bias,
+        "duration_s": round(time.perf_counter() - started, 1),
+    }
+    if args.judged:
+        _, judged = load_jsonl(Path(args.judged))
+        report["agreement_with_exact_match"] = agreement_with_exact_match(answers, judged)
+    path = CALIBRATION_DIR / f"{report['run_id']}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({**report, "rows": rows}, indent=2), encoding="utf-8")
+    print(json.dumps(report, indent=2))
+    print(f"saved {path}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="llmops-eval", description=__doc__)
     parser.add_argument("--results", default=str(RESULTS_DIR), help=argparse.SUPPRESS)
@@ -364,9 +411,18 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--judge-url", default=JUDGE_URL, help="OpenAI-compatible base URL")
     p.add_argument("--judge-model", default=JUDGE_MODEL)
     p.add_argument("--prompt", default="dev", help="judge prompt stage or version")
-    p.add_argument("--rubrics", default=",".join(RUBRICS))
+    p.add_argument("--rubrics", default=",".join(POINTWISE))
     p.add_argument("--limit", type=int, default=0)
     p.set_defaults(fn=cmd_judge)
+
+    p = sub.add_parser("calibrate", help="score the judge on answers with known labels")
+    p.add_argument("answers", help="answers-*.jsonl whose contexts the probes reuse")
+    p.add_argument("--judged", help="judged-*.jsonl of the same answers, for exact-match agreement")
+    p.add_argument("--judge-url", default=JUDGE_URL)
+    p.add_argument("--judge-model", default=JUDGE_MODEL)
+    p.add_argument("--prompt", default="dev")
+    p.add_argument("--repeats", type=int, default=2, help="correctness calls per probe")
+    p.set_defaults(fn=cmd_calibrate)
 
     args = parser.parse_args(argv)
     return int(args.fn(args))

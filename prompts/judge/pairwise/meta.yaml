@@ -1,0 +1,19 @@
+name: pairwise
+family: judge
+purpose: Prefer the better-supported of two answers; used only for position and verbosity bias probes.
+owner: platform-team
+stages:
+  dev: 1.0.0
+versions:
+- version: 1.0.0
+  sha256: 6f4974e79a103d268a32c54b367cfb1ba642de5a06d4c0d6686ea1825840a53d
+  released_at: '2026-10-17T19:13:53+00:00'
+  model_compatibility:
+  - llama3.2:3b
+  variables:
+  - answer_a
+  - answer_b
+  - context
+  - question
+  eval_run: null
+  notes: 'initial: A|B|tie, length explicitly not a reason'

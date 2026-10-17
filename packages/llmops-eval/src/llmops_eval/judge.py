@@ -47,6 +47,11 @@ class CompletenessVerdict(BaseModel):
     verdict: Literal["complete", "partial", "missing"]
 
 
+class PairwiseVerdict(BaseModel):
+    reason: str
+    verdict: Literal["A", "B", "tie"]
+
+
 class Claim(BaseModel):
     claim: str
     verdict: Literal["supported", "unsupported", "contradicted"]
@@ -83,7 +88,10 @@ RUBRICS: dict[str, Rubric] = {
     ),
     # Scored from the claim list, see _score.
     "faithfulness": Rubric("faithfulness", FaithfulnessVerdict, {}),
+    # A preference, not a score: used only by the position and verbosity probes.
+    "pairwise": Rubric("pairwise", PairwiseVerdict, {}),
 }
+POINTWISE = ["correctness", "relevance", "completeness", "faithfulness"]
 
 
 @dataclass
@@ -127,7 +135,7 @@ def _score(rubric: Rubric, parsed: BaseModel) -> tuple[str | None, float | None,
         supported = sum(c.verdict == "supported" for c in parsed.claims)
         return None, round(supported / len(parsed.claims), 4), parsed.faithfulness
     verdict = str(getattr(parsed, "verdict"))  # noqa: B009 — every non-faithfulness schema has it
-    return verdict, rubric.scores[verdict], None
+    return verdict, rubric.scores.get(verdict), None
 
 
 def interpret(rubric: Rubric, raw: str) -> tuple[Status, BaseModel | None, str | None]:
